@@ -20,24 +20,15 @@ class HashableDict(dict):
 
 
 class ComputationGraph(object):
-    def __init__(self, db_name, dataset_name, metadata=None, drop_all=False, default_backend=None):
+    def __init__(self, name=None, default_backend=None):
         """
         
-        :param db_name:
-        :param dataset_name:
         :param metadata:
         :param drop_all:
         :param default_backend:
         """
         
-        connect(db_name, drop_all=drop_all)
-        
-        self.metadata = metadata
-        # TODO: remove dependency on peewee
-        self.dataset, _ = Dataset.get_or_create(
-            name=dataset_name,
-            metadata=metadata
-        )
+        self.name = name
         
         self.default_backend = default_backend
         self.backends = dict()
@@ -94,7 +85,6 @@ class ComputationGraph(object):
         
         if node_name not in self.nodes:
             self.nodes[node_name] = NodeWrapper(
-                dataset=self.dataset,
                 graph=self,
                 node_name=node_name,
                 metadata=metadata,
@@ -118,8 +108,8 @@ class ComputationGraph(object):
         from graphviz import Digraph
         
         dot = Digraph(
-            name=self.dataset.name,
-            comment=self.dataset.name,
+            name=self.name,
+            comment=self.name,
             graph_attr=dict(
                 splies='line',
                 # nodesep='1',
@@ -128,18 +118,20 @@ class ComputationGraph(object):
         )
         
         max_node = 1e12
-        node_ids = set()
+        node_ids = dict()
         
-        def get_or_create_node(node):
-            if node not in node_ids:
-                node_ids.add(node.id)
-                node_name = node.name
+        def get_or_create_node(node_name):
+            if node_name not in node_ids:
+                node_ids[node_name] = len(node_ids)
+                
+                short_node_name = node_name
                 if len(node_name) > max_len:
-                    node_name = node_name[:max_len] + '...'
+                    short_node_name = node_name[:max_len] + '...'
+                    
                 dot.node(
-                    name=str(node.id),
-                    label=[node_name, node_name.split('/')[-1]][split_keys],
-                    style=['filled', None][self.nodes[node.name].exists]
+                    name=str(node_ids[node_name]),
+                    label=[short_node_name, short_node_name.split('/')[-1]][split_keys],
+                    style=['filled', None][self.nodes[node_name].exists]
                 )
         
         for sink_name, sink in self.nodes.items():
@@ -160,7 +152,7 @@ class ComputationGraph(object):
             #     )
             # )
             
-            get_or_create_node(sink.node)
+            get_or_create_node(sink.node_name)
             
             # dot.edge(
             #     tail_name=factor_name,
@@ -169,11 +161,11 @@ class ComputationGraph(object):
             # )
             
             for sn, source in (sink.sources or {}).items():
-                get_or_create_node(source.node)
+                get_or_create_node(source.node_name)
                 
                 dot.edge(
-                    tail_name=str(source.node.id),
-                    head_name=str(sink.node.id),  # factor_name
+                    tail_name=str(node_ids[source.node_name]),
+                    head_name=str(node_ids[sink.node_name]),  # factor_name
                     fontsize='8',
                     # arrowhead='none'
                 )
@@ -216,10 +208,9 @@ class BackendManager(object):
 
 
 class NodeWrapper(object):
-    def __init__(self, dataset, graph, node_name, metadata, func, sources, kwargs, backend, autoextract=False):
+    def __init__(self, graph, node_name, metadata, func, sources, kwargs, backend, autoextract=False):
         """
         
-        :param dataset:
         :param node_name:
         :param metadata:
         :param func:
@@ -242,68 +233,69 @@ class NodeWrapper(object):
                 assert isinstance(sources, dict), type(sources)
                 for source in sources.values():
                     assert isinstance(source,
-                                      NodeWrapper)  # Often, there has been a mixup between a source and kwarg parameter when instantiating the node
+                                      NodeWrapper), ('Often, there has been a mixup between a source '
+                                                     'and kwarg parameter when instantiating the node')
         
-        self.dataset = dataset
         self.sources = sources
+        self.node_name = node_name
         
-        # Get or create the node
-        # TODO: remove dependency on peewee
-        query = Node.select().where(
-            Node.dataset == dataset,
-            Node.name == node_name,
-        )
+        # # Get or create the node
+        # # TODO: remove dependency on peewee
+        # query = Node.select().where(
+        #     Node.dataset == dataset,
+        #     Node.name == node_name,
+        # )
         
         self.backend_name, self.backend = backend
         
         # Get or create the source
-        if query.count() == 0:
-            try:
-                # TODO: remove dependency on peewee
-                self.node = Node.create(
-                    dataset=dataset,
-                    name=node_name,
-                    func=self.func.__name__,
-                    metadata=metadata or {},
-                    kwargs=kwargs or {},
-                    backend=self.backend_name,
-                )
-            except TypeError:
-                # TODO: remove dependency on peewee
-                self.node = Node.create(
-                    dataset=dataset,
-                    name=node_name,
-                    func=self.func.__name__,
-                    metadata=metadata or {},
-                    kwargs={},
-                    backend=self.backend_name,
-                )
+        # if query.count() == 0:
+        #     try:
+        #         # TODO: remove dependency on peewee
+        #         self.node = Node.create(
+        #             dataset=dataset,
+        #             name=node_name,
+        #             func=self.func.__name__,
+        #             metadata=metadata or {},
+        #             kwargs=kwargs or {},
+        #             backend=self.backend_name,
+        #         )
+        #     except TypeError:
+        #         # TODO: remove dependency on peewee
+        #         self.node = Node.create(
+        #             dataset=dataset,
+        #             name=node_name,
+        #             func=self.func.__name__,
+        #             metadata=metadata or {},
+        #             kwargs={},
+        #             backend=self.backend_name,
+        #         )
         
-        else:
-            # TODO: remove dependency on peewee
-            self.node = Node.get(
-                Node.dataset == dataset,
-                Node.name == node_name,
-            )
+        # else:
+        #     # TODO: remove dependency on peewee
+        #     self.node = Node.get(
+        #         Node.dataset == dataset,
+        #         Node.name == node_name,
+        #     )
         
-        if self.sources and len(self.sources):
-            for source in self.sources.values():
-                # TODO: remove dependency on peewee
-                Edges.get_or_create(
-                    source=source.node,
-                    sink=self.node,
-                )
-        
-        if self.sources is None or len(self.sources) == 0:
-            if not self.exists and autoextract:
-                hashable_kwargs, hashable_sources = self.hashables()
-                compute_or_load_evaluation(
-                    node=self.node,
-                    sources=hashable_sources,
-                    kwargs=hashable_kwargs,
-                    func=self.func,
-                    backend=self.backend,
-                )
+        # if self.sources and len(self.sources):
+        #     for source in self.sources.values():
+        #         # TODO: remove dependency on peewee
+        #         Edges.get_or_create(
+        #             source=source.node,
+        #             sink=self.node,
+        #         )
+        #
+        # if self.sources is None or len(self.sources) == 0:
+        #     if not self.exists and autoextract:
+        #         hashable_kwargs, hashable_sources = self.hashables()
+        #         compute_or_load_evaluation(
+        #             node=self.node,
+        #             sources=hashable_sources,
+        #             kwargs=hashable_kwargs,
+        #             func=self.func,
+        #             backend=self.backend,
+        #         )
     
     @property
     def exists(self):
@@ -312,7 +304,7 @@ class NodeWrapper(object):
         :return:
         """
         
-        return self.backend.exists(self.node)
+        return self.backend.exists(self.node_name)
     
     @property
     def name(self):
@@ -321,7 +313,7 @@ class NodeWrapper(object):
         :return:
         """
         
-        return self.node.name
+        return self.node_name
     
     def __repr__(self):
         """
@@ -333,7 +325,7 @@ class NodeWrapper(object):
             self.__class__.__name__,
             ','.join(self.sources.keys()) if self.sources else '',
             self.func.__name__,
-            self.node.name
+            self.node_name
         )
     
     def hashables(self):
@@ -377,7 +369,7 @@ class NodeWrapper(object):
         hashable_kwargs, hashable_sources = self.hashables()
         
         res = compute_or_load_evaluation(
-            node=self.node,
+            node_name=self.node_name,
             sources=hashable_sources,
             kwargs=hashable_kwargs,
             func=self.func,
@@ -393,7 +385,7 @@ class NodeWrapper(object):
         return res
 
 
-def compute_or_load_evaluation(node, sources, kwargs, func, backend):
+def compute_or_load_evaluation(node_name, sources, kwargs, func, backend):
     """
     
     :param node:
@@ -404,25 +396,25 @@ def compute_or_load_evaluation(node, sources, kwargs, func, backend):
     :return:
     """
     
-    if node in compute_or_load_evaluation.cache:
-        return compute_or_load_evaluation.cache[node]
+    if node_name in compute_or_load_evaluation.cache:
+        return compute_or_load_evaluation.cache[node_name]
     
-    if not backend.exists(node=node):
+    if not backend.exists(node_name=node_name):
         inputs = (kwargs or {}).copy()
         if sources and len(sources):
             for key, value in sources.items():
                 inputs[key] = value.evaluate()
         
-        print('Calculating {}'.format(node))
+        print('Calculating {}'.format(node_name))
         
         data = func(**inputs)
-        backend.save_data(node=node, data=data)
+        backend.save_data(node_name=node_name, data=data)
     
     else:
-        print('Acquiring {}'.format(node))
-        data = backend.load_data(node=node)
+        print('Acquiring {}'.format(node_name))
+        data = backend.load_data(node_name=node_name)
     
-    compute_or_load_evaluation.cache[node] = data
+    compute_or_load_evaluation.cache[node_name] = data
     
     return data
 

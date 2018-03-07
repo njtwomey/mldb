@@ -4,8 +4,6 @@ from os import makedirs, remove
 import json
 import pickle
 
-from .mldb import *
-
 
 class Backend(object):
     def __init__(self):
@@ -15,30 +13,30 @@ class Backend(object):
         
         pass
     
-    def exists(self, node):
+    def exists(self, node_name):
         """
         
-        :param node:
+        :param node_name:
         
         :return:
         """
         
         raise NotImplementedError
     
-    def load_data(self, node):
+    def load_data(self, node_name):
         """
         
-        :param node:
+        :param node_name:
         
         :return:
         """
         
         raise NotImplementedError
     
-    def save_data(self, node, data):
+    def save_data(self, node_name, data):
         """
         
-        :param node:
+        :param node_name:
         
         :param data:
         :return:
@@ -46,10 +44,10 @@ class Backend(object):
         
         raise NotImplementedError
     
-    def del_node(self, node):
+    def del_node(self, node_name):
         """
         
-        :param node:
+        :param node_name:
         
         :return:
         """
@@ -85,54 +83,54 @@ class FileSystemBase(Backend):
             if not exists(path_join):
                 makedirs(path_join)
     
-    def node_path(self, node):
+    def node_path(self, node_name):
         """
         
-        :param node:
+        :param node_name:
         :return:
         """
         
         return join(self.path, '{}.{}'.format(
-            node.name,
+            node_name,
             self.ext
         ))
     
-    def exists(self, node):
+    def exists(self, node_name):
         """
         
-        :param node:
+        :param node_name:
         :return:
         """
         
-        return exists(self.node_path(node=node))
+        return exists(self.node_path(node_name=node_name))
     
-    def load_data(self, node):
+    def load_data(self, node_name):
         """
         
-        :param node:
+        :param node_name:
         :return:
         """
         
         raise NotImplementedError
     
-    def save_data(self, node, data):
+    def save_data(self, node_name, data):
         """
         
-        :param node:
+        :param node_name:
         :param data:
         :return:
         """
         
         raise NotImplementedError
     
-    def del_node(self, node):
+    def del_node(self, node_name):
         """
         
-        :param node:
+        :param node_name:
         :return:
         """
         
-        remove(self.node_path(node))
+        remove(self.node_path(node_name))
 
 
 class JsonBackend(FileSystemBase):
@@ -144,24 +142,24 @@ class JsonBackend(FileSystemBase):
         
         super(JsonBackend, self).__init__(path, 'json')
     
-    def load_data(self, node):
+    def load_data(self, node_name):
         """
         
-        :param node:
+        :param node_name:
         :return:
         """
         
-        return json.load(open(self.node_path(node=node), 'r'))
+        return json.load(open(self.node_path(node_name=node_name), 'r'))
     
-    def save_data(self, node, data):
+    def save_data(self, node_name, data):
         """
         
-        :param node:
+        :param node_name:
         :param data:
         :return:
         """
         
-        node_path = self.node_path(node=node)
+        node_path = self.node_path(node_name=node_name)
         self.create_path(node_path)
         json.dump(data, open(node_path, 'w'))
 
@@ -175,79 +173,23 @@ class PickleBackend(FileSystemBase):
         
         super(PickleBackend, self).__init__(path, 'pkl')
     
-    def load_data(self, node):
+    def load_data(self, node_name):
         """
         
-        :param node:
+        :param node_name:
         :return:
         """
         
-        return pickle.load(open(self.node_path(node=node), 'rb'))
+        return pickle.load(open(self.node_path(node_name=node_name), 'rb'))
     
-    def save_data(self, node, data):
+    def save_data(self, node_name, data):
         """
         
-        :param node:
+        :param node_name:
         :param data:
         :return:
         """
         
-        node_path = self.node_path(node=node)
+        node_path = self.node_path(node_name=node_name)
         self.create_path(node_path)
         pickle.dump(data, open(node_path, 'wb'))
-
-
-"""
-DATABASE BACKENDS
-"""
-
-
-# class PostgresBackend(Backend):
-#     def __init__(self):
-#         """
-#
-#         """
-#
-#         super(PostgresBackend, self).__init__()
-#
-#     def exists(self, node):
-#         """
-#
-#         :param node:
-#         :return:
-#         """
-#
-#         return Data.select().where(Data.node == node).exists()
-#
-#     def load_data(self, node):
-#         """
-#
-#         :param node:
-#         :return:
-#         """
-#
-#         query = Data.select().where(
-#             Data.node == node
-#         ).dicts()
-#
-#         return [row['d'] for row in query]
-#
-#     def save_data(self, node, data):
-#         """
-#
-#         :param node:
-#         :param data:
-#         :return:
-#         """
-#
-#         assert isinstance(data, list) and isinstance(data[0], dict)
-#         Data.insert_many([dict(node=node, d=dd) for di, dd in data.iterrows()]).execute()
-#
-#     def del_node(self, node):
-#         """
-#
-#         :param node:
-#         :return:
-#         """
-#
-#         Data.delete().where(Data.node == node).execute()

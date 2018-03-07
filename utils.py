@@ -4,39 +4,37 @@ import numpy as np
 import playhouse.postgres_ext as peewee
 import dill
 
-from . import db, all_tables
 
-
-def connect(db_name, db_credentials=None, drop_all=False, create_hstore=True):
-    """
-    
-    :param db_name:
-    :param db_credentials:
-    :param drop_all:
-    :return:
-    """
-    
-    db_defaults = dict(user='', password='', host='localhost', port=5432)
-    db_credentials = db_credentials or {}
-    for kk, vv in db_defaults.items():
-        if kk not in db_credentials:
-            db_credentials[kk] = vv
-    
-    db.init(db_name, **db_credentials)
-    
-    if drop_all:
-        db.drop_tables(all_tables, safe=True, cascade=True)
-    
-    try:
-        db.create_tables(all_tables, safe=True)
-    except peewee.ProgrammingError as ex:
-        if create_hstore:
-            db.execute_sql('CREATE EXTENSION hstore;')
-            db.create_tables(all_tables, safe=True)
-        else:
-            raise ex
-    
-    return db
+# def connect(db_name, db_credentials=None, drop_all=False, create_hstore=True):
+#     """
+#
+#     :param db_name:
+#     :param db_credentials:
+#     :param drop_all:
+#     :return:
+#     """
+#
+#     db_defaults = dict(user='', password='', host='localhost', port=5432)
+#     db_credentials = db_credentials or {}
+#     for kk, vv in db_defaults.items():
+#         if kk not in db_credentials:
+#             db_credentials[kk] = vv
+#
+#     db.init(db_name, **db_credentials)
+#
+#     if drop_all:
+#         db.drop_tables(all_tables, safe=True, cascade=True)
+#
+#     try:
+#         db.create_tables(all_tables, safe=True)
+#     except peewee.ProgrammingError as ex:
+#         if create_hstore:
+#             db.execute_sql('CREATE EXTENSION hstore;')
+#             db.create_tables(all_tables, safe=True)
+#         else:
+#             raise ex
+#
+#     return db
 
 
 def serialise_function(func):
@@ -79,6 +77,8 @@ def norm_shape(shape):
 
 def sliding_window(a, ws, ss=None, flatten=True):
     '''
+    based on: https://stackoverflow.com/questions/22685274/divide-an-image-into-5x5-blocks-in-python-and-compute-histogram-for-each-block/22701004
+    
     Return a sliding window over a in any number of dimensions
 
     Parameters:
@@ -110,12 +110,12 @@ def sliding_window(a, ws, ss=None, flatten=True):
     # ensure that ws, ss, and a.shape all have the same number of dimensions
     ls = [len(shape), len(ws), len(ss)]
     if 1 != len(set(ls)):
-        raise ValueError( \
+        raise ValueError(
             'a.shape, ws and ss must all have the same length. They were %s' % str(ls))
     
     # ensure that ws is smaller than a in every dimension
     if np.any(ws > shape):
-        raise ValueError( \
+        raise ValueError(
             'ws cannot be larger than a in any dimension. a.shape was %s and ws was %s' % (str(a.shape), str(ws)))
     
     # how many slices will there be in each dimension?
