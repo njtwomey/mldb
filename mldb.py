@@ -29,6 +29,7 @@ class Dataset(BaseModel):
         :return:
         """
         
+        # TODO: remove dependency on peewee
         query = Node.select().where(Node.name == item)
         if not query.exists():
             raise ValueError
@@ -74,6 +75,7 @@ class Node(BaseModel):
         :return:
         """
         
+        # TODO: remove dependency on peewee
         return Edges.select().where(Edges.sink == self)
     
     @property
@@ -141,37 +143,6 @@ class Edges(BaseModel):
         )
 
 
-class Data(BaseModel):
-    id = peewee.PrimaryKeyField()
-    
-    node = peewee.ForeignKeyField(
-        Node,
-        related_name='data',
-        on_delete='cascade',
-        null=False,
-        index=True,
-    )
-    
-    d = peewee.BinaryJSONField(null=False)
-    
-    def __repr__(self):
-        """
-        
-        :return:
-        """
-        
-        return '<{} d={}>'.format(
-            self.__class__.__name__,
-            self.d
-        )
-    
-    class Meta:
-        db_table = 'data'
-        
-        order_by = (
-            'node',
-        )
-
 """
 
 """
@@ -180,7 +151,6 @@ all_tables = [
     Dataset,
     Node,
     Edges,
-    Data,
 ]
 
-# drop table data; drop table sources; drop table edges; drop table nodes; drop table datasets ;
+# drop table sources; drop table edges; drop table nodes; drop table datasets ;

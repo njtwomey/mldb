@@ -33,6 +33,7 @@ class ComputationGraph(object):
         connect(db_name, drop_all=drop_all)
         
         self.metadata = metadata
+        # TODO: remove dependency on peewee
         self.dataset, _ = Dataset.get_or_create(
             name=dataset_name,
             metadata=metadata
@@ -105,7 +106,7 @@ class ComputationGraph(object):
         
         return self.nodes[node_name]
     
-    def render_graph(self, root=None, view=True, split=False, max_len=40):
+    def render_graph(self, root=None, view=True, split_keys=False, max_len=40):
         """
 
         :param root:
@@ -122,11 +123,11 @@ class ComputationGraph(object):
             graph_attr=dict(
                 splies='line',
                 # nodesep='1',
-                rankdir='LR',
+                rankdir='TB',
             )
         )
         
-        max_node = max(n.id for n in Node.select()) + 1
+        max_node = 1e12
         node_ids = set()
         
         def get_or_create_node(node):
@@ -137,7 +138,7 @@ class ComputationGraph(object):
                     node_name = node_name[:max_len] + '...'
                 dot.node(
                     name=str(node.id),
-                    label=[node_name, node_name.split('/')[-1]][split],
+                    label=[node_name, node_name.split('/')[-1]][split_keys],
                     style=['filled', None][self.nodes[node.name].exists]
                 )
         
@@ -177,7 +178,11 @@ class ComputationGraph(object):
                     # arrowhead='none'
                 )
         
-        dot.render(directory=root, view=view)
+        import subprocess
+        try:
+            dot.render(directory=root, view=view)
+        except subprocess.CalledProcessError:
+            return
 
 
 class BackendManager(object):
@@ -243,6 +248,7 @@ class NodeWrapper(object):
         self.sources = sources
         
         # Get or create the node
+        # TODO: remove dependency on peewee
         query = Node.select().where(
             Node.dataset == dataset,
             Node.name == node_name,
@@ -253,6 +259,7 @@ class NodeWrapper(object):
         # Get or create the source
         if query.count() == 0:
             try:
+                # TODO: remove dependency on peewee
                 self.node = Node.create(
                     dataset=dataset,
                     name=node_name,
@@ -262,6 +269,7 @@ class NodeWrapper(object):
                     backend=self.backend_name,
                 )
             except TypeError:
+                # TODO: remove dependency on peewee
                 self.node = Node.create(
                     dataset=dataset,
                     name=node_name,
@@ -272,6 +280,7 @@ class NodeWrapper(object):
                 )
         
         else:
+            # TODO: remove dependency on peewee
             self.node = Node.get(
                 Node.dataset == dataset,
                 Node.name == node_name,
@@ -279,6 +288,7 @@ class NodeWrapper(object):
         
         if self.sources and len(self.sources):
             for source in self.sources.values():
+                # TODO: remove dependency on peewee
                 Edges.get_or_create(
                     source=source.node,
                     sink=self.node,
@@ -377,7 +387,7 @@ class NodeWrapper(object):
         self.graph.render_graph(
             root=self.graph.fs_root,
             view=False,
-            split=True
+            split_keys=True
         )
         
         return res
@@ -406,19 +416,6 @@ def compute_or_load_evaluation(node, sources, kwargs, func, backend):
         print('Calculating {}'.format(node))
         
         data = func(**inputs)
-        # if isinstance(data, pd.DataFrame):
-        #     data = data.to_dict(orient='list')
-        # elif isinstance(data, list):
-        #     assert isinstance(data[0], dict)
-        # else:
-        #     warnings.warn('Serialising the data type `{}` is not necessarily supported by MLDB. Proceed at own risk!'.format(type(data)))
-        
-        # try:
-        # except TypeError as ex:
-        #     raise TypeError('{}\nFactor function {} expects the following parameters {} but received {}'.format(
-        #         ex, func.__name__, func.__code__.co_varnames, list(inputs.keys())
-        #     ))
-        
         backend.save_data(node=node, data=data)
     
     else:

@@ -38,7 +38,9 @@ def one_by_one(keys):
             for vals in tqdm(zip(*[kwargs[key] for key in keys]), total=len(kwargs[keys[0]])):
                 for key, val in zip(keys, vals):
                     kwargs_copy[key] = val
-                values.append(func(**kwargs_copy))
+                val = func(**kwargs_copy)
+                if val:
+                    values.append(val)
             return values
         
         return wrapper

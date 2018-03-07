@@ -160,7 +160,7 @@ class JsonBackend(FileSystemBase):
         :param data:
         :return:
         """
-
+        
         node_path = self.node_path(node=node)
         self.create_path(node_path)
         json.dump(data, open(node_path, 'w'))
@@ -191,7 +191,7 @@ class PickleBackend(FileSystemBase):
         :param data:
         :return:
         """
-
+        
         node_path = self.node_path(node=node)
         self.create_path(node_path)
         pickle.dump(data, open(node_path, 'wb'))
@@ -202,52 +202,52 @@ DATABASE BACKENDS
 """
 
 
-class PostgresBackend(Backend):
-    def __init__(self):
-        """
-        
-        """
-        
-        super(PostgresBackend, self).__init__()
-    
-    def exists(self, node):
-        """
-        
-        :param node:
-        :return:
-        """
-        
-        return Data.select().where(Data.node == node).exists()
-    
-    def load_data(self, node):
-        """
-        
-        :param node:
-        :return:
-        """
-        
-        query = Data.select().where(
-            Data.node == node
-        ).dicts()
-        
-        return [row['d'] for row in query]
-    
-    def save_data(self, node, data):
-        """
-        
-        :param node:
-        :param data:
-        :return:
-        """
-        
-        assert isinstance(data, list) and isinstance(data[0], dict)
-        Data.insert_many([dict(node=node, d=dd) for di, dd in data.iterrows()]).execute()
-    
-    def del_node(self, node):
-        """
-        
-        :param node:
-        :return:
-        """
-        
-        Data.delete().where(Data.node == node).execute()
+# class PostgresBackend(Backend):
+#     def __init__(self):
+#         """
+#
+#         """
+#
+#         super(PostgresBackend, self).__init__()
+#
+#     def exists(self, node):
+#         """
+#
+#         :param node:
+#         :return:
+#         """
+#
+#         return Data.select().where(Data.node == node).exists()
+#
+#     def load_data(self, node):
+#         """
+#
+#         :param node:
+#         :return:
+#         """
+#
+#         query = Data.select().where(
+#             Data.node == node
+#         ).dicts()
+#
+#         return [row['d'] for row in query]
+#
+#     def save_data(self, node, data):
+#         """
+#
+#         :param node:
+#         :param data:
+#         :return:
+#         """
+#
+#         assert isinstance(data, list) and isinstance(data[0], dict)
+#         Data.insert_many([dict(node=node, d=dd) for di, dd in data.iterrows()]).execute()
+#
+#     def del_node(self, node):
+#         """
+#
+#         :param node:
+#         :return:
+#         """
+#
+#         Data.delete().where(Data.node == node).execute()
