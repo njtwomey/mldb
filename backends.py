@@ -56,6 +56,24 @@ class Backend(object):
 
 
 """
+VOLATILE BACKEND
+
+A non-persistent backend
+"""
+
+
+class VolatileBackend(Backend):
+    def exists(self, node_name):
+        return False
+    
+    def load_data(self, node_name):
+        raise NotImplementedError
+    
+    def save_data(self, node_name, data):
+        pass
+
+
+"""
 FILESYSTEM BACKENDS
 """
 
