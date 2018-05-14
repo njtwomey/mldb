@@ -1,8 +1,8 @@
 from numpy.lib.stride_tricks import as_strided as ast
 import numpy as np
 
-import playhouse.postgres_ext as peewee
-import dill
+# import playhouse.postgres_ext as peewee
+# import dill
 
 
 # def connect(db_name, db_credentials=None, drop_all=False, create_hstore=True):
