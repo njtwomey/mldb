@@ -20,7 +20,7 @@ class HashableDict(dict):
 
 
 class ComputationGraph(object):
-    def __init__(self, name=None, default_backend=None):
+    def __init__(self, name=None, default_backend=None, graph_root=None):
         """
         
         :param metadata:
@@ -29,7 +29,7 @@ class ComputationGraph(object):
         """
         
         self.name = name
-        
+        self.graph_root=graph_root
         self.default_backend = default_backend
         self.backends = dict()
         self.nodes = dict()
@@ -342,7 +342,7 @@ class NodeWrapper(object):
             elif isinstance(vv, (int, float, str)):
                 hashable_kwargs[kk] = vv
             else:
-                print(kk, type(vv))
+                # print(kk, type(vv))
                 hashable_kwargs[kk] = vv
                 # raise NotImplementedError
         hashable_kwargs = HashableDict(hashable_kwargs)
@@ -377,7 +377,7 @@ class NodeWrapper(object):
         )
         
         self.graph.render_graph(
-            root=self.graph.fs_root,
+            root=self.graph.graph_root,
             view=False,
             split_keys=True
         )

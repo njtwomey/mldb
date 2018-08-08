@@ -1,5 +1,5 @@
 from os.path import exists, join
-from os import makedirs, remove
+from os import makedirs, remove, sep
 
 import json
 import pickle
@@ -95,7 +95,7 @@ class FileSystemBase(Backend):
             makedirs(path)
     
     def create_path(self, path):
-        path_split = path.split('/')
+        path_split = path.split(sep)
         if len(path_split) > 1:
             path_join = '/'.join(path_split[:-1])
             if not exists(path_join):
