@@ -97,7 +97,7 @@ class FileSystemBase(Backend):
     def create_path(self, path):
         path_split = path.split(sep)
         if len(path_split) > 1:
-            path_join = '/'.join(path_split[:-1])
+            path_join = sep.join(path_split[:-1])
             if not exists(path_join):
                 makedirs(path_join)
     

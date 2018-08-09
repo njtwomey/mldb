@@ -357,7 +357,7 @@ class NodeWrapper(object):
         
         raise NotImplementedError
     
-    def evaluate(self):
+    def evaluate(self, render=False):
         """
         Check if exists in Data model, and load if does.
 
@@ -375,12 +375,13 @@ class NodeWrapper(object):
             func=self.func,
             backend=self.backend,
         )
-        
-        self.graph.render_graph(
-            root=self.graph.graph_root,
-            view=False,
-            split_keys=True
-        )
+
+        if render:
+            self.graph.render_graph(
+                root=self.graph.graph_root,
+                view=False,
+                split_keys=True
+            )
         
         return res
 
