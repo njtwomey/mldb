@@ -399,7 +399,9 @@ def compute_or_load_evaluation(node_name, sources, kwargs, func, backend):
     
     if node_name in compute_or_load_evaluation.cache:
         return compute_or_load_evaluation.cache[node_name]
-    
+
+    cache_data = hasattr(backend, 'cache_data') and backend.cache_data
+
     if not backend.exists(node_name=node_name):
         inputs = (kwargs or {}).copy()
         if sources and len(sources):
@@ -414,8 +416,9 @@ def compute_or_load_evaluation(node_name, sources, kwargs, func, backend):
     else:
         print('Acquiring {}'.format(node_name))
         data = backend.load_data(node_name=node_name)
-    
-    compute_or_load_evaluation.cache[node_name] = data
+
+    if cache_data:
+        compute_or_load_evaluation.cache[node_name] = data
     
     return data
 

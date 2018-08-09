@@ -11,7 +11,7 @@ class Backend(object):
         
         """
         
-        pass
+        cache_data = True
     
     def exists(self, node_name):
         """
