@@ -239,63 +239,7 @@ class NodeWrapper(object):
         self.sources = sources
         self.node_name = node_name
         
-        # # Get or create the node
-        # # TODO: remove dependency on peewee
-        # query = Node.select().where(
-        #     Node.dataset == dataset,
-        #     Node.name == node_name,
-        # )
-        
         self.backend_name, self.backend = backend
-        
-        # Get or create the source
-        # if query.count() == 0:
-        #     try:
-        #         # TODO: remove dependency on peewee
-        #         self.node = Node.create(
-        #             dataset=dataset,
-        #             name=node_name,
-        #             func=self.func.__name__,
-        #             metadata=metadata or {},
-        #             kwargs=kwargs or {},
-        #             backend=self.backend_name,
-        #         )
-        #     except TypeError:
-        #         # TODO: remove dependency on peewee
-        #         self.node = Node.create(
-        #             dataset=dataset,
-        #             name=node_name,
-        #             func=self.func.__name__,
-        #             metadata=metadata or {},
-        #             kwargs={},
-        #             backend=self.backend_name,
-        #         )
-        
-        # else:
-        #     # TODO: remove dependency on peewee
-        #     self.node = Node.get(
-        #         Node.dataset == dataset,
-        #         Node.name == node_name,
-        #     )
-        
-        # if self.sources and len(self.sources):
-        #     for source in self.sources.values():
-        #         # TODO: remove dependency on peewee
-        #         Edges.get_or_create(
-        #             source=source.node,
-        #             sink=self.node,
-        #         )
-        #
-        # if self.sources is None or len(self.sources) == 0:
-        #     if not self.exists and autoextract:
-        #         hashable_kwargs, hashable_sources = self.hashables()
-        #         compute_or_load_evaluation(
-        #             node=self.node,
-        #             sources=hashable_sources,
-        #             kwargs=hashable_kwargs,
-        #             func=self.func,
-        #             backend=self.backend,
-        #         )
     
     @property
     def exists(self):
