@@ -63,7 +63,7 @@ class ComputationGraph(object):
         """
         
         for node in self.nodes.values():
-            if (not node.exists()) or (node.exists() and if_exists):
+            if (not node.exists) or (node.exists and if_exists):
                 node.evaluate()
     
     def node(self, node_name, func, sources=None, kwargs=None, metadata=None, backend=None):
