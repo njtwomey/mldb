@@ -352,14 +352,16 @@ def compute_or_load_evaluation(node_name, sources, kwargs, func, backend):
             for key, value in sources.items():
                 inputs[key] = value.evaluate()
         
-        print('Calculating {}'.format(node_name))
-        
+        print('Calculating {}...'.format(node_name), end=' ')
         data = func(**inputs)
+        print('Saving...', end=' ')
         backend.save_data(node_name=node_name, data=data)
+        print('Done\n')
     
     else:
-        print('Acquiring {}'.format(node_name))
+        print('Acquiring {}'.format(node_name), end=' ')
         data = backend.load_data(node_name=node_name)
+        print('Done\n')
 
     if cache_data:
         compute_or_load_evaluation.cache[node_name] = data
