@@ -53,6 +53,14 @@ class Backend(object):
         """
         
         raise NotImplementedError
+    
+    def prepare(self, node_name):
+        """
+        
+        :param node_name:
+        :return:
+        """
+        pass
 
 
 """
@@ -149,6 +157,16 @@ class FileSystemBase(Backend):
         """
         
         remove(self.node_path(node_name))
+        
+    def prepare(self, node_name):
+        """
+        Called before the function and save_data.
+        
+        :param node_name:
+        :return:
+        """
+        node_path = self.node_path(node_name=node_name)
+        self.create_path(node_path)
 
 
 class JsonBackend(FileSystemBase):
@@ -178,7 +196,6 @@ class JsonBackend(FileSystemBase):
         """
         
         node_path = self.node_path(node_name=node_name)
-        self.create_path(node_path)
         json.dump(data, open(node_path, 'w'))
 
 
@@ -209,6 +226,5 @@ class PickleBackend(FileSystemBase):
         """
         
         node_path = self.node_path(node_name=node_name)
-        self.create_path(node_path)
         pickle.dump(data, open(node_path, 'wb'))
 

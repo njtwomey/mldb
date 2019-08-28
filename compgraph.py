@@ -351,17 +351,20 @@ def compute_or_load_evaluation(node_name, sources, kwargs, func, backend):
         if sources and len(sources):
             for key, value in sources.items():
                 inputs[key] = value.evaluate()
+
+        backend.prepare(node_name=node_name)
         
-        print('Calculating {}...'.format(node_name), end=' ')
+        print('Calculating {} ...'.format(node_name), end=' ')
         data = func(**inputs)
-        print('Saving...', end=' ')
-        backend.save_data(node_name=node_name, data=data)
-        print('Done\n')
+        print('saving ...', end=' ')
+        if data is not None:
+            backend.save_data(node_name=node_name, data=data)
+        print('done.')
     
     else:
         print('Acquiring {}'.format(node_name), end=' ')
         data = backend.load_data(node_name=node_name)
-        print('Done\n')
+        print('done.')
 
     if cache_data:
         compute_or_load_evaluation.cache[node_name] = data
