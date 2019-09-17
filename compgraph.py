@@ -30,11 +30,13 @@ class ComputationGraph(object):
         :param default_backend:
         """
         
-        self.name = name
+        self.name = name.lower()
         self.graph_root = graph_root
-        self.default_backend = default_backend
         self.backends = dict()
         self.nodes = dict()
+        
+        self.default_backend = None
+        self.set_default_backend(default_backend)
     
     def __repr__(self):
         """
@@ -43,7 +45,7 @@ class ComputationGraph(object):
         """
         return f"<{self.__class__.__name__} name={self.name}>"
     
-    def add_backend(self, name, backend):
+    def add_backend(self, name, backend, default=False):
         """
         
         :param name:
@@ -52,6 +54,20 @@ class ComputationGraph(object):
         """
         
         self.backends[name] = backend
+        if default:
+            self.set_default_backend(backend)
+    
+    def set_default_backend(self, backend):
+        """
+        
+        :param backend:
+        :return:
+        """
+        
+        if backend is None:
+            assert len(self.backends)
+            backend = list(self.backends.keys())[0]
+        self.default_backend = backend
     
     def evaluate_all_nodes(self, force=False):
         """

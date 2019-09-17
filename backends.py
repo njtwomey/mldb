@@ -4,6 +4,14 @@ from os import makedirs, remove, sep
 import json
 import pickle
 
+__all__ = [
+    'Backend',
+    'VolatileBackend',
+    'FileSystemBase',
+    'PickleBackend',
+    'JsonBackend',
+]
+
 
 class Backend(object):
     def __init__(self):
@@ -157,7 +165,7 @@ class FileSystemBase(Backend):
         """
         
         remove(self.node_path(node_name))
-        
+    
     def prepare(self, node_name):
         """
         Called before the function and save_data.
@@ -227,4 +235,3 @@ class PickleBackend(FileSystemBase):
         
         node_path = self.node_path(node_name=node_name)
         pickle.dump(data, open(node_path, 'wb'))
-
