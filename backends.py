@@ -178,13 +178,15 @@ class FileSystemBase(Backend):
 
 
 class JsonBackend(FileSystemBase):
-    def __init__(self, path):
+    def __init__(self, path, sort_keys=False, indent=None):
         """
         
         :param path:
         """
         
         super(JsonBackend, self).__init__(path, 'json')
+        self.sort_keys = sort_keys
+        self.indent = indent
     
     def load_data(self, node_name):
         """
@@ -203,8 +205,12 @@ class JsonBackend(FileSystemBase):
         :return:
         """
         
-        node_path = self.node_path(node_name=node_name)
-        json.dump(data, open(node_path, 'w'))
+        json.dump(
+            data,
+            open(self.node_path(node_name=node_name), 'w'),
+            sort_keys=self.sort_keys,
+            indent=self.indent,
+        )
 
 
 class PickleBackend(FileSystemBase):

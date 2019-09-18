@@ -50,8 +50,11 @@ class ComputationGraph(object):
         
         :param name:
         :param backend:
+        :param default:
         :return:
         """
+        
+        assert name not in self.backends
         
         self.backends[name] = backend
         if default:
@@ -65,8 +68,8 @@ class ComputationGraph(object):
         """
         
         if backend is None:
-            assert len(self.backends)
-            backend = list(self.backends.keys())[0]
+            return
+        assert backend in self.backends, f'The backend {backend} is not found in {{{self.backends.keys()}}}'
         self.default_backend = backend
     
     def evaluate_all_nodes(self, force=False):
@@ -372,9 +375,11 @@ def compute_or_load_evaluation(node_name, sources, kwargs, func, backend, split_
     if len(dirs) < 2:
         node_name_short = all_dirs[-1]
     else:
-        node_name_short = f'{sep}...{sep}'.join(
-            (dirs[0], dirs[-1])
-        )
+        # if len(dirs)
+        node_name_short = f'{sep}...{sep}'.join((
+            dirs[0], dirs[-1]
+        ))
+    node_name_short = node_name
     
     if not backend.exists(node_name=node_name):
         inputs = (kwargs or {}).copy()
