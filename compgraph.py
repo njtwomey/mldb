@@ -1,8 +1,4 @@
-import pandas as pd
-
-import warnings
-from os.path import join, sep
-from itertools import dropwhile, islice
+from os import environ
 
 from . import *
 
@@ -22,7 +18,7 @@ class HashableDict(dict):
 
 
 class ComputationGraph(object):
-    def __init__(self, name=None, default_backend=None, graph_root=None):
+    def __init__(self, name=None, default_backend=None):
         """
         
         :param metadata:
@@ -31,11 +27,10 @@ class ComputationGraph(object):
         """
         
         self.name = name.lower()
-        self.graph_root = graph_root
         self.backends = dict()
         self.nodes = dict()
         
-        self.default_backend = None
+        self.default_backend = default_backend
         self.set_default_backend(default_backend)
     
     def __repr__(self):
@@ -69,7 +64,10 @@ class ComputationGraph(object):
         
         if backend is None:
             return
-        assert backend in self.backends, f'The backend {backend} is not found in {{{self.backends.keys()}}}'
+        if backend not in self.backends:
+            raise KeyError(
+                f'The backend {backend} is not found in {{{self.backends.keys()}}}'
+            )
         self.default_backend = backend
     
     def evaluate_all_nodes(self, force=False):
@@ -83,7 +81,7 @@ class ComputationGraph(object):
             if (not node.exists) or (node.exists and force):
                 node.evaluate()
     
-    def node(self, node_name, func, sources=None, kwargs=None, metadata=None, backend=None):
+    def node(self, node_name, func, sources=None, kwargs=None, backend=None):
         """
         
         :param node_name:
@@ -97,143 +95,30 @@ class ComputationGraph(object):
         
         if backend is None:
             backend = self.default_backend
-        # elif hasattr(backend, '__len__'):
-        #     assert len(backend) == 2
         
         if node_name not in self.nodes:
             self.nodes[node_name] = NodeWrapper(
                 graph=self,
                 node_name=node_name,
-                metadata=metadata,
                 func=func,
                 kwargs=kwargs,
                 sources=sources,
-                backend=(backend, self.backends[backend])
+                backend=self.backends[backend],
             )
         
         return self.nodes[node_name]
-    
-    def render_graph(self, root=None, view=True, split_keys=False, max_len=40):
-        """
-
-        :param root:
-        :param view:
-        :param max_len:
-        :return:
-        """
-        
-        from graphviz import Digraph
-        
-        dot = Digraph(
-            name=self.name,
-            comment=self.name,
-            graph_attr=dict(
-                splies='line',
-                # nodesep='1',
-                rankdir='TB',
-            )
-        )
-        
-        max_node = 1e12
-        node_ids = dict()
-        
-        def get_or_create_node(node_name):
-            if node_name not in node_ids:
-                node_ids[node_name] = len(node_ids)
-                
-                short_node_name = node_name
-                if len(node_name) > max_len:
-                    short_node_name = node_name[:max_len] + '...'
-                
-                dot.node(
-                    name=str(node_ids[node_name]),
-                    label=[short_node_name, short_node_name.split('/')[-1]][split_keys],
-                    style=['filled', None][self.nodes[node_name].exists]
-                )
-        
-        for sink_name, sink in self.nodes.items():
-            max_node += 1
-            
-            # factor_name = str(max_node)
-            # factor_label = '{}({})'.format(
-            #     sink.node.func,
-            #     ', '.join(['{}={}'.format(kk, vv) for kk, vv in sink.node.kwargs.items()])
-            # )
-            
-            # dot.node(
-            #     name=factor_name,
-            #     label='',
-            #     style='filled',
-            #     _attributes=dict(
-            #         shape='point'
-            #     )
-            # )
-            
-            get_or_create_node(sink.node_name)
-            
-            # dot.edge(
-            #     tail_name=factor_name,
-            #     head_name=str(sink.node.id),
-            #     taillabel=factor_label,
-            # )
-            
-            for sn, source in (sink.sources or {}).items():
-                get_or_create_node(source.node_name)
-                
-                dot.edge(
-                    tail_name=str(node_ids[source.node_name]),
-                    head_name=str(node_ids[sink.node_name]),  # factor_name
-                    fontsize='8',
-                    # arrowhead='none'
-                )
-        
-        import subprocess
-        try:
-            dot.render(directory=root, view=view)
-        except subprocess.CalledProcessError:
-            return
-
-
-class BackendManager(object):
-    def __init__(self):
-        """
-        
-        """
-        
-        self.backends = dict()
-    
-    def add_backend(self, key, backend):
-        """
-        
-        :param key:
-        :param backend:
-        :return:
-        """
-        
-        self.backends[key] = backend
-        setattr(self, key, backend)
-    
-    def del_backend(self, key):
-        """
-        
-        :param key:
-        :return:
-        """
-        
-        del self.backends[key]
-        delattr(self, key)
 
 
 class NodeWrapper(object):
-    def __init__(self, graph, node_name, metadata, func, sources, kwargs, backend, autoextract=False):
+    def __init__(self, graph, node_name, func, sources, kwargs, backend):
         """
         
+        :param graph:
         :param node_name:
-        :param metadata:
         :param func:
         :param sources:
         :param kwargs:
-        :param serialise:
+        :param backend:
         """
         
         self.graph = graph
@@ -242,21 +127,18 @@ class NodeWrapper(object):
         
         # Validate source types
         if sources is not None:
-            if isinstance(sources, NodeWrapper):
-                sources = {sources.name: sources}
-            elif isinstance(sources, (list, tuple)):
-                sources = {src.name: src for src in sources}
-            else:
-                assert isinstance(sources, dict), type(sources)
-                for source in sources.values():
-                    assert isinstance(source,
-                                      NodeWrapper), ('Often, there has been a mixup between a source '
-                                                     'and kwarg parameter when instantiating the node')
+            assert isinstance(sources, dict), type(sources)
+            for source in sources.values():
+                if not isinstance(source, NodeWrapper):
+                    raise ValueError(
+                        f'All `sources` arguments must be of type `NodeWrapper but '
+                        f'{source} is of type {type(source)}. This can sometimes occur '
+                        f'when `kwargs` and `sources` arguments are mixed up.'
+                    )
         
         self.sources = sources
+        self.backend = backend
         self.node_name = node_name
-        
-        self.backend_name, self.backend = backend
     
     @property
     def exists(self):
@@ -323,7 +205,7 @@ class NodeWrapper(object):
         
         raise NotImplementedError
     
-    def evaluate(self, render=False):
+    def evaluate(self):
         """
         Check if exists in Data model, and load if does.
 
@@ -342,17 +224,10 @@ class NodeWrapper(object):
             backend=self.backend,
         )
         
-        if render:
-            self.graph.render_graph(
-                root=self.graph.graph_root,
-                view=False,
-                split_keys=True
-            )
-        
         return res
 
 
-def compute_or_load_evaluation(node_name, sources, kwargs, func, backend, split_point='build'):
+def compute_or_load_evaluation(node_name, sources, kwargs, func, backend):
     """
 
     :param node_name:
@@ -360,51 +235,54 @@ def compute_or_load_evaluation(node_name, sources, kwargs, func, backend, split_
     :param kwargs:
     :param func:
     :param backend:
-    :param split_point:
     :return:
     """
+    
+    # If the data is cached, return it
     if node_name in compute_or_load_evaluation.cache:
         return compute_or_load_evaluation.cache[node_name]
     
-    cache_data = hasattr(backend, 'cache_data') and backend.cache_data
-    
-    all_dirs = node_name.split(sep)
-    dirs = list(islice(dropwhile(
-        lambda dd: dd != split_point, all_dirs
-    ), 1, None))
-    if len(dirs) < 2:
-        node_name_short = all_dirs[-1]
-    else:
-        # if len(dirs)
-        node_name_short = f'{sep}...{sep}'.join((
-            dirs[0], dirs[-1]
-        ))
+    # Built a short name for printing purposes
     node_name_short = node_name
+    if 'BUILD_ROOT' in environ:
+        if node_name.startswith(environ['BUILD_ROOT']):
+            node_name_short = node_name[len(environ['BUILD_ROOT']):]
     
     if not backend.exists(node_name=node_name):
-        inputs = (kwargs or {}).copy()
+        # Ensure that the sources and keywords have no overlapping members
+        kwargs = (kwargs or dict())
+        sources = (sources or dict())
+        if len(set(kwargs.keys()) & set(sources.keys())) > 0:
+            raise ValueError(
+                f'Source and keywords arguments cannot overlap; with '
+                f'sources: {{{sources.keys()}}}; keywords: {{{kwargs.keys()}}}'
+            )
+        
+        # Build up dictionary of inputs
+        inputs = kwargs.copy()
         if sources and len(sources):
             for key, value in sources.items():
                 inputs[key] = value.evaluate()
         
         backend.prepare(node_name=node_name)
         
-        print('Calculating {} ...'.format(node_name_short), end=' ')
+        # Calculate the output
+        print('Calculating {}'.format(node_name_short))
         try:
             data = func(**inputs)
         except Exception as ex:
             raise ex
-        print('saving ...', end=' ')
+        
+        # Save data if not None
         if data is not None:
             backend.save_data(node_name=node_name, data=data)
-        print('done.')
     
     else:
-        # print('Acquiring {}'.format(node_name_short), end=' ')
         data = backend.load_data(node_name=node_name)
-        # print('done.')
-    
-    if cache_data:
+
+    # Determine whether to cache these results or not
+    cache_data = hasattr(backend, 'cache_data') and backend.cache_data
+    if cache_data and data is not None:
         compute_or_load_evaluation.cache[node_name] = data
     
     return data

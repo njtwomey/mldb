@@ -19,7 +19,7 @@ class Backend(object):
         
         """
         
-        cache_data = True
+        self.cache_data = True
     
     def exists(self, node_name):
         """
