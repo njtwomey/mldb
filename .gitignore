@@ -3,6 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Log files
+*.log
+
+# Example build dir
+build/
+
 # C extensions
 *.so
 
