@@ -44,12 +44,15 @@ class ComputationGraph(object):
     In [3]: def load_data():
        ...:     return [[1, 2, 3], [4, 5, 6]]
        ...:
-    In [4]: node = graph.node(func=load_data)
-    In [5]: max_node = graph.node(func=lambda data: list(map(max, data)), data=node)
-    In [6]: max_node
-    Out[6]: <NodeWrapper sources=[data] kwargs=[] factor=max_row sink=9bf467a4-0878-44a1-9ed1-f1956a9826ae>
-    In [7]: max_node.evaluate()
-    Out[7]: [3, 6]
+    In [4]: def max_row(data):
+       ...:     return list(map(max, data))
+       ...:
+    In [5]: node = graph.node(func=load_data)
+    In [6]: max_node = graph.node(func=lambda data: list(map(max, data)), data=node)
+    In [7]: max_node
+    Out[7]: <NodeWrapper sources=[data] kwargs=[] factor=max_row sink=9bf467a4-0878-44a1-9ed1-f1956a9826ae>
+    In [8]: max_node.evaluate()
+    Out[8]: [3, 6]
     ```
     
     Note, that it was not necessary to directly call `evaluate()` on the node object. This is because the
@@ -295,7 +298,7 @@ class NodeWrapper(object):
         try:
             func_name = self.func.__name__
         except AttributeError:
-            func_name = 'functools.partial'
+            func_name = '__unavailable__'
         
         return '<{} sources=[{}] kwargs=[{}] factor={} sink={}>'.format(
             self.__class__.__name__,
