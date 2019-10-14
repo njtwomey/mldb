@@ -3,6 +3,7 @@ from os import makedirs, remove, sep
 
 import json
 import pickle
+import joblib
 
 from mldb.logger import get_logger
 
@@ -246,5 +247,33 @@ class PickleBackend(FileSystemBase):
         :return:
         """
         
-        node_path = self.node_path(name=name)
-        pickle.dump(data, open(node_path, 'wb'))
+        pickle.dump(data, open(self.node_path(name=name), 'wb'))
+
+
+class JoblibBackend(FileSystemBase):
+    def __init__(self, path):
+        """
+
+        :param path:
+        """
+        
+        super(JoblibBackend, self).__init__(path, 'joblib')
+    
+    def load_data(self, name):
+        """
+
+        :param name:
+        :return:
+        """
+        
+        return joblib.load(self.node_path(name=name))
+    
+    def save_data(self, name, data):
+        """
+
+        :param name:
+        :param data:
+        :return:
+        """
+        
+        joblib.dump(data, self.node_path(name=name))

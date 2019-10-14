@@ -171,14 +171,14 @@ class ComputationGraph(object):
             logger.info(f"Evaluating {node.name}")
             node.evaluate()
     
-    def node(self, func, name=None, backend=None, **kwargs_):
+    def node(self, func, name=None, backend=None, **kwargs):
         """
         
         Args:
             func:
             name:
             backend:
-            **kwargs_:
+            **kwargs:
 
         Returns: NodeWrapper object
             A wrapper around the computation of the node object.
@@ -208,7 +208,7 @@ class ComputationGraph(object):
                 name=name,
                 func=func,
                 backend=self.backends[backend],
-                **kwargs_
+                **kwargs
             )
         
         else:
@@ -230,22 +230,6 @@ class NodeWrapper(object):
             backend:
             **kwargs:
         """
-        
-        # # Validate source types
-        # if sources is not None:
-        #     if not isinstance(sources, dict):
-        #         msg = f"The type of sources must be a dictionary, but got {type(sources)} instead"
-        #         logger.critical(msg)
-        #         raise TypeError(msg)
-        #     for source in sources.values():
-        #         if not isinstance(source, NodeWrapper):
-        #             msg = (
-        #                 f'All `sources` arguments must be of type `NodeWrapper but '
-        #                 f'{source} is of type {type(source)}. This can sometimes occur '
-        #                 f'when `kwargs` and `sources` arguments are mixed up.'
-        #             )
-        #             logger.critical(msg)
-        #             raise ValueError(msg)
         
         self.graph = graph
         
