@@ -1,2 +1,6 @@
 uuid
 joblib
+numpy
+pandas
+matplotlib
+pickle
