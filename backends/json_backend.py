@@ -9,7 +9,7 @@ __all__ = [
 
 class JsonInterface(FileSystemInterface):
     def __init__(self, name, **kwargs):
-        super(JsonInterface, self).__init__(name=name)
+        super(JsonInterface, self).__init__(path=name)
         self.json_kwargs = dict(kwargs)
     
     def load(self):

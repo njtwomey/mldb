@@ -9,11 +9,11 @@ __all__ = [
 
 
 class FileSystemInterface(BackendInterface):
-    def __init__(self, name):
-        super(FileSystemInterface, self).__init__(name=name)
+    def __init__(self, path):
+        super(FileSystemInterface, self).__init__(path=path)
         
         # Ensure that the output directory path exists
-        path_split = name.split(sep)
+        path_split = path.split(sep)
         if len(path_split) > 1:
             path_join = sep.join(path_split[:-1])
             makedirs(path_join, exist_ok=True)

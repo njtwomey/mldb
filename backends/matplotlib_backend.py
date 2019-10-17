@@ -9,10 +9,10 @@ __all__ = [
 
 
 class MatPlotLibInterface(FileSystemInterface):
-    def load_data(self):
+    def data(self):
         return True
     
-    def save_data(self, data):
+    def data(self, data):
         fig = data
         validate_dtype(fig, Figure)
         fig.savefig(self.path)

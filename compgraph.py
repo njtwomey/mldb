@@ -353,7 +353,7 @@ def compute_or_load_evaluation(name, func, backend, **kwargs):
             try:
                 data = func(**inputs)
             except Exception as ex:
-                logger.error(f"The following exception was raised when computing {name}: {ex}")
+                logger.exception(f"The following exception was raised when computing {name}: {ex}")
                 raise ex
             
             # Save data if not None
@@ -361,11 +361,15 @@ def compute_or_load_evaluation(name, func, backend, **kwargs):
                 try:
                     backend_interface.save(data=data)
                 except Exception as ex:
-                    logger.error(f"The following exception was raised when saving {name}: {ex}")
+                    logger.exception(f"The following exception was raised when saving {name}: {ex}")
                     raise ex
     
     else:
-        data = backend_interface.load()
+        try:
+           data = backend_interface.load()
+        except Exception as ex:
+            logger.exception(f"The following exception was raised when loading {name}: {ex}")
+            raise ex
     
     # Determine whether to cache these results or not
     cache_data = hasattr(backend, 'cache_data') and backend.cache_data

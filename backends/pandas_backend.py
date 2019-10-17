@@ -10,7 +10,7 @@ __all__ = [
 
 
 class PandasInterface(FileSystemInterface):
-    def load_data(self):
+    def load(self):
         data = pd_load(
             path=self.path,
             compression='gzip',
@@ -18,7 +18,7 @@ class PandasInterface(FileSystemInterface):
         validate_dtype(data, DataFrame)
         return data
     
-    def save_data(self, data):
+    def save(self, data):
         validate_dtype(data, DataFrame)
         data.to_pickle(
             path=self.path,

@@ -118,7 +118,8 @@ class BackendInterface(object):
         Raises:
             FileLockExistsException if the
         """
-        return FileLock(self.path, lock_file_contents=self.path)
+        from os.path import join 
+        return FileLock(join('data', 'build', self.path), lock_file_contents=self.path)
 
 
 class Backend(object):
