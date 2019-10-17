@@ -249,7 +249,7 @@ class NodeWrapper(object):
 
         """
         
-        return self.backend.exists(self.name)
+        return self.backend.get(self.name).exists()
     
     @property
     def sources(self):

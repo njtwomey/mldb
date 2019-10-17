@@ -8,9 +8,9 @@ __all__ = [
 
 
 class JsonInterface(FileSystemInterface):
-    def __init__(self, name, kwargs):
+    def __init__(self, name, **kwargs):
         super(JsonInterface, self).__init__(name=name)
-        self.json_kwargs = dict(**kwargs)
+        self.json_kwargs = dict(kwargs)
     
     def load(self):
         with open(self.path, 'r') as fil:

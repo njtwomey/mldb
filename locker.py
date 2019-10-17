@@ -16,14 +16,16 @@ class FileLockExistsException(Exception):
 
 
 class FileLock(object):
-    """ A file locking mechanism that has context-manager support so
-        you can use it in a ``with`` statement. This should be relatively cross
-        compatible as it doesn't rely on ``msvcrt`` or ``fcntl`` for the locking.
+    """
+    A file locking mechanism that has context-manager support so you can use it in a ``with`` statement.
+    This should be relatively cross compatible as it doesn't rely on ``msvcrt`` or ``fcntl`` for the
+    locking.
     """
     
     def __init__(self, protected_file_path, lock_file_contents=None):
-        """ Prepare the file locker. Specify the file to lock and optionally
-            the maximum timeout and the delay between each attempt to lock.
+        """
+        Prepare the file locker. Specify the file to lock and optionally the maximum timeout and the
+        delay between each attempt to lock.
         """
         self.is_locked = False
         self.lockfile = f"{protected_file_path}.lock"
@@ -36,8 +38,8 @@ class FileLock(object):
     
     def locked(self):
         """
-        Returns True iff the file is owned by THIS FileLock instance.
-        (Even if this returns false, the file could be owned by another FileLock instance, possibly in a different thread or process).
+        Returns True iff the file is owned by THIS FileLock instance. (Even if this returns false, the file
+        could be owned by another FileLock instance, possibly in a different thread or process).
         """
         return self.is_locked
     
@@ -50,8 +52,8 @@ class FileLock(object):
     def acquire(self, blocking=True):
         """
         Acquire the lock, if possible. If the lock is in use, and `blocking` is False, return False.
-        Otherwise, check again every `self.delay` seconds until it either gets the lock or
-        exceeds `timeout` number of seconds, in which case it raises an exception.
+        Otherwise, check again every `self.delay` seconds until it either gets the lock or exceeds `timeout`
+        number of seconds, in which case it raises an exception.
         """
         # Attempt to create the lockfile.
         # These flags cause os.open to raise an OSError if the file already exists.
@@ -67,32 +69,30 @@ class FileLock(object):
     
     def release(self):
         """
-        Get rid of the lock by deleting the lockfile.
-        When working in a `with` statement, this gets automatically
-        called at the end.
+        Get rid of the lock by deleting the lockfile. When working in a `with` statement, this gets
+        automatically called at the end.
         """
         self.is_locked = False
         os.unlink(self.lockfile)
     
     def __enter__(self):
         """
-        Activated when used in the with statement.
-        Should automatically acquire a lock to be used in the with block.
+        Activated when used in the with statement. Should automatically acquire a lock to be used
+        in the with block.
         """
         self.acquire()
         return self
     
     def __exit__(self, type, value, traceback):
         """
-        Activated at the end of the with statement.
-        It automatically releases the lock if it isn't locked.
+        Activated at the end of the with statement. It automatically releases the lock if it isn't
+        locked.
         """
         self.release()
     
     def __del__(self):
         """
-        Make sure this ``FileLock`` instance doesn't leave a .lock file
-        lying around.
+        Make sure this ``FileLock`` instance doesn't leave a .lock file lying around.
         """
         if self.is_locked:
             self.release()
