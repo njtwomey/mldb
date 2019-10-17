@@ -102,6 +102,7 @@ class ComputationGraph(object):
         Returns:
 
         """
+        
         return f"<{self.__class__.__name__} name={self.name}>"
     
     def add_backend(self, name, backend, default=False):
@@ -337,33 +338,34 @@ def compute_or_load_evaluation(name, func, backend, **kwargs):
         ) else name
     )
     
-    if not backend.exists(name=name):
-        # Build up dictionary of inputs
-        inputs = kwargs.copy()
-        for key, value in kwargs.items():
-            if isinstance(value, NodeWrapper):
-                inputs[key] = value.evaluate()
-        
-        backend.prepare(name=name)
-        
-        # Calculate the output
-        logger.info(f'Calculating {name_short}')
-        try:
-            data = func(**inputs)
-        except Exception as ex:
-            logger.error(f"The following exception was raised when computing {name}: {ex}")
-            raise ex
-        
-        # Save data if not None
-        if data is not None:
+    backend_interface = backend.get(name)
+    
+    if not backend_interface.exists():
+        with backend_interface.lock():
+            # Build up dictionary of inputs
+            inputs = kwargs.copy()
+            for key, value in kwargs.items():
+                if isinstance(value, NodeWrapper):
+                    inputs[key] = value.evaluate()
+            
+            # Calculate the output
+            logger.info(f'Calculating {name_short}')
             try:
-                backend.save_data(name=name, data=data)
+                data = func(**inputs)
             except Exception as ex:
-                logger.error(f"The following exception was raised when saving {name}: {ex}")
+                logger.error(f"The following exception was raised when computing {name}: {ex}")
                 raise ex
+            
+            # Save data if not None
+            if data is not None:
+                try:
+                    backend_interface.save(data=data)
+                except Exception as ex:
+                    logger.error(f"The following exception was raised when saving {name}: {ex}")
+                    raise ex
     
     else:
-        data = backend.load_data(name=name)
+        data = backend_interface.load()
     
     # Determine whether to cache these results or not
     cache_data = hasattr(backend, 'cache_data') and backend.cache_data
@@ -379,6 +381,8 @@ if not hasattr(compute_or_load_evaluation, 'cache'):
 
 if __name__ == '__main__':
     def main():
+        from time import sleep
+        
         def load():
             return [[1, 2, 3], [4, 5, 6]]
         
@@ -388,14 +392,24 @@ if __name__ == '__main__':
         def times_x(data, x):
             return [d * x for d in data]
         
+        def long_process():
+            sleep(10)
+            return 'long process completed'
+        
         graph = ComputationGraph()
         node = graph.node(func=load)
         node_max = graph.node(func=max_row, data=node)
         x3 = graph.node(func=times_x, data=node_max, x=3)
+        
+        long = graph.node(func=long_process, name='long_process_name')
+        
+        print(node.evaluate())
+        print(node_max.evaluate())
         print(x3.evaluate())
         print(node)
         print(node_max)
         print(x3)
+        print(long.evaluate())
     
     
     main()
