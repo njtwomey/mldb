@@ -19,8 +19,4 @@ class PickleInterface(FileSystemInterface):
 
 class PickleBackend(FileSystemBase):
     def __init__(self, path):
-        super(PickleBackend, self).__init__(
-            interface=PickleInterface,
-            path=path,
-            ext='pkl',
-        )
+        super(PickleBackend, self).__init__(interface=PickleInterface, path=path, ext='pkl')

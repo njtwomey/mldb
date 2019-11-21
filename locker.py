@@ -5,6 +5,7 @@
 
 import os
 import sys
+import fcntl
 
 __all__ = [
     'FileLockExistsException', 'FileLock',
@@ -22,19 +23,14 @@ class FileLock(object):
     locking.
     """
     
-    def __init__(self, protected_file_path, lock_file_contents=None):
+    def __init__(self, protected_file_path):
         """
         Prepare the file locker. Specify the file to lock and optionally the maximum timeout and the
         delay between each attempt to lock.
         """
         self.is_locked = False
-        self.lockfile = f"{protected_file_path}.lock"
-        
-        _lock_file_contents = ["Owning process args:"]
-        for arg in sys.argv:
-            _lock_file_contents.append(arg)
-        _lock_file_contents.append(f'Node name: {lock_file_contents}')
-        self._lock_file_contents = '\n'.join(_lock_file_contents)
+        self.lock_filename = f"{protected_file_path}.lock"
+        self.lock_file = None
     
     def locked(self):
         """
@@ -47,7 +43,7 @@ class FileLock(object):
         """
         Returns True iff the file is currently available to be locked.
         """
-        return not os.path.exists(self.lockfile)
+        return not os.path.exists(self.lock_filename)
     
     def acquire(self, blocking=True):
         """
@@ -58,11 +54,9 @@ class FileLock(object):
         # Attempt to create the lockfile.
         # These flags cause os.open to raise an OSError if the file already exists.
         try:
-            fd = os.open(self.lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
-            with os.fdopen(fd, "a") as f:
-                # Print some info about the current process as debug info for anyone who bothers to look.
-                f.write(self._lock_file_contents)
-        except FileExistsError:
+            self.lock_file = open(self.lock_filename, 'w')
+            fcntl.flock(self.lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except IOError:
             raise FileLockExistsException
         self.is_locked = True
         return True
@@ -73,7 +67,8 @@ class FileLock(object):
         automatically called at the end.
         """
         self.is_locked = False
-        os.unlink(self.lockfile)
+        fcntl.flock(self.lock_file, fcntl.LOCK_UN)
+        os.unlink(self.lock_filename)
     
     def __enter__(self):
         """
@@ -101,7 +96,7 @@ class FileLock(object):
         """
         For debug purposes only.  Removes the lock file from the hard disk.
         """
-        if os.path.exists(self.lockfile):
+        if os.path.exists(self.lock_filename):
             self.release()
             return True
         return False

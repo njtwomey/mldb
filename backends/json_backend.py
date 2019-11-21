@@ -23,15 +23,8 @@ class JsonInterface(FileSystemInterface):
 
 class JsonBackend(FileSystemBase):
     def __init__(self, path, sort_keys=True, indent=None, cls=None):
-        super(JsonBackend, self).__init__(
-            path=path, ext='json', interface=JsonInterface
-        )
-        
-        self.json_kwargs = dict(
-            sort_keys=sort_keys,
-            indent=indent,
-            cls=cls,
-        )
+        super(JsonBackend, self).__init__(path=path, ext='json', interface=JsonInterface)
+        self.json_kwargs = dict(sort_keys=sort_keys, indent=indent, cls=cls)
     
     def get(self, name, *args, **kwargs):
         return super(JsonBackend, self).get(name, **self.json_kwargs)

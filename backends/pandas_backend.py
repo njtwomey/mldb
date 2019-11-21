@@ -11,25 +11,15 @@ __all__ = [
 
 class PandasInterface(FileSystemInterface):
     def load(self):
-        data = pd_load(
-            path=self.path,
-            compression='gzip',
-        )
+        data = pd_load(path=self.path, compression='gzip')
         validate_dtype(data, DataFrame)
         return data
     
     def save(self, data):
         validate_dtype(data, DataFrame)
-        data.to_pickle(
-            path=self.path,
-            compression='gzip',
-        )
+        data.to_pickle(path=self.path, compression='gzip')
 
 
 class PandasBackend(FileSystemBase):
     def __init__(self, path):
-        super(PandasBackend, self).__init__(
-            interface=PandasInterface,
-            ext='pd',
-            path=path,
-        )
+        super(PandasBackend, self).__init__(interface=PandasInterface, ext='pd', path=path)

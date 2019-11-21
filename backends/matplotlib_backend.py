@@ -9,10 +9,10 @@ __all__ = [
 
 
 class MatPlotLibInterface(FileSystemInterface):
-    def data(self):
+    def load(self):
         return True
     
-    def data(self, data):
+    def save(self, data):
         fig = data
         validate_dtype(fig, Figure)
         fig.savefig(self.path)
@@ -21,11 +21,7 @@ class MatPlotLibInterface(FileSystemInterface):
 
 class MatPlotLibBackend(FileSystemBase):
     def __init__(self, path, ext):
-        super(MatPlotLibBackend, self).__init__(
-            interface=MatPlotLibInterface,
-            ext=ext,
-            path=path,
-        )
+        super(MatPlotLibBackend, self).__init__(interface=MatPlotLibInterface, ext=ext, path=path)
 
 
 class PNGBackend(MatPlotLibBackend):

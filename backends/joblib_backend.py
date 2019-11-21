@@ -17,8 +17,4 @@ class JoblibInterface(FileSystemInterface):
 
 class JoblibBackend(FileSystemBase):
     def __init__(self, path, ext='joblib'):
-        super(JoblibBackend, self).__init__(
-            interface=JoblibInterface,
-            path=path,
-            ext=ext,
-        )
+        super(JoblibBackend, self).__init__(interface=JoblibInterface, path=path, ext=ext)

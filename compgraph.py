@@ -280,10 +280,7 @@ class NodeWrapper(object):
 
         """
         
-        try:
-            func_name = self.func.__name__
-        except AttributeError:
-            func_name = '__unavailable__'
+        func_name = self.func.__name__
         
         return '<{} sources=[{}] kwargs=[{}] factor={} sink={}>'.format(
             self.__class__.__name__,
@@ -366,7 +363,7 @@ def compute_or_load_evaluation(name, func, backend, **kwargs):
     
     else:
         try:
-           data = backend_interface.load()
+            data = backend_interface.load()
         except Exception as ex:
             logger.exception(f"The following exception was raised when loading {name}: {ex}")
             raise ex

@@ -23,8 +23,4 @@ class NumpyInterface(FileSystemInterface):
 
 class NumpyBackend(FileSystemBase):
     def __init__(self, path):
-        super(NumpyBackend, self).__init__(
-            interface=NumpyInterface,
-            ext='npy',
-            path=path,
-        )
+        super(NumpyBackend, self).__init__(interface=NumpyInterface, ext='npy', path=path)

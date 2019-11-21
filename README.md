@@ -8,32 +8,6 @@ This library is massively inspired by [HyperStream](https://github.com/IRC-SPHER
 
 ## Basic usage
 
-Here is a minimal example of how the library can be used:
-
-```python
-from mldb import ComputationGraph
-
-# A simple function that returns some data
-def load_data(): 
-    return [[1, 2, 3], [4, 5, 6]]
-
-# Define the computational graph
-graph = ComputationGraph()
-
-# Define a node
-node = graph.node(func=load_data)
-
-# Print the node object
-print(node) 
-# Prints: <NodeWrapper sources=[] kwargs=[] factor=load_data sink=5c7afc35-184f-4830-ba08-5ae9ba47e67e>
-
-# Evaluate the node
-print(node.evaluate()) 
-# Prints: [[1, 2, 3], [4, 5, 6]]
-```
-
-Since the example here is so straightforward, the usefulness of the library may not immediately be apparent. However, it is easy to build up a more complex set of relationships between nodes. For computational reasons, the library allows the output of nodes to be cached to eliminate redundant computation. Furthermore, one can direct the output of nodes to 'backends' which offer persistent caching of function outputs.  
-
 The example below shows how one may branch out and extract features from the same root node (`data`), then how these features can be aggregated back into one node and cached to file. 
 
 ```python
@@ -112,4 +86,11 @@ A file called `feats.pkl` will be created in the current working directory when 
 
 which has not required the raw data loader or any of the intermediate functions to be called. If we imagine that some of these functions are expensive to execute, a significant saving has been produced with little overhead in our coding since the library has transparently directed the outputs to be stored in persistent memory. In principal all nodes can be serialised to file, but my preference is to serialise only those nodes that are computationally intensive to compute. 
 
+## Backends
 
+One of the main advantages of this library is that the result of computations can be stored to file. This can be thoght of as persistent caching. This option is useful for two reasons: 
+
+1. It eliminates the requirement to re-compute outputs by loading them instead.  
+2. Lockfiles are created to eliminate the parallel computation of outputs. 
+
+The first point is important. If it is as fast to compute outputs as it is to load them, there is little value to be gained by serialising them.

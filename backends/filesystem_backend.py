@@ -36,6 +36,4 @@ class FileSystemBase(Backend):
     
     def get(self, name, *args, **kwargs):
         path = join(self.path, f'{name}.{self.ext}')
-        return self.interface(
-            path, *args, **kwargs
-        )
+        return self.interface(path, *args, **kwargs)
