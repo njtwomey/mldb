@@ -7,3 +7,4 @@ from mldb.backends.pickle_backend import *
 from mldb.backends.numpy_backend import *
 from mldb.backends.pandas_backend import *
 from mldb.backends.matplotlib_backend import *
+from mldb.backends.sklearn_backend import *

@@ -56,8 +56,10 @@ class FileLock(object):
         try:
             self.lock_file = open(self.lock_filename, 'w')
             fcntl.flock(self.lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except FileNotFoundError:
+            raise FileNotFoundError
         except IOError:
-            raise FileLockExistsException
+            raise FileLockExistsException(f'The file {self.lock_filename} is currently in use.')
         self.is_locked = True
         return True
     
@@ -68,7 +70,10 @@ class FileLock(object):
         """
         self.is_locked = False
         fcntl.flock(self.lock_file, fcntl.LOCK_UN)
-        os.unlink(self.lock_filename)
+        try:
+            os.unlink(self.lock_filename)
+        except FileNotFoundError:
+            pass
     
     def __enter__(self):
         """

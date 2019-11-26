@@ -1,5 +1,5 @@
 from os.path import exists, join
-from os import makedirs, unlink, sep
+from os import makedirs, unlink
 
 from mldb.backends.base import BackendInterface, Backend
 
@@ -13,10 +13,7 @@ class FileSystemInterface(BackendInterface):
         super(FileSystemInterface, self).__init__(path=path)
         
         # Ensure that the output directory path exists
-        path_split = path.split(sep)
-        if len(path_split) > 1:
-            path_join = sep.join(path_split[:-1])
-            makedirs(path_join, exist_ok=True)
+        self.prepare()
     
     def exists(self):
         return exists(self.path)

@@ -1,3 +1,6 @@
+from os.path import sep
+from os import makedirs
+
 from mldb.locker import FileLock, FileLockExistsException
 
 __all__ = [
@@ -118,7 +121,14 @@ class BackendInterface(object):
         Raises:
             FileLockExistsException if the
         """
+        self.prepare()
         return FileLock(self.path)
+    
+    def prepare(self):
+        path_split = self.path.split(sep)
+        if len(path_split) > 1:
+            path_join = sep.join(path_split[:-1])
+            makedirs(path_join, exist_ok=True)
 
 
 class Backend(object):
