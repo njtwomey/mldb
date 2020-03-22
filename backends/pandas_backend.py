@@ -11,7 +11,7 @@ __all__ = [
 
 class PandasInterface(FileSystemInterface):
     def load(self):
-        data = pd_load(path=self.path, compression='gzip')
+        data = pd_load(filepath_or_buffer=self.path, compression='gzip')
         validate_dtype(data, DataFrame)
         return data
     
