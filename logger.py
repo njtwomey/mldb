@@ -24,7 +24,7 @@ def get_file_handler():
     return file_handler
 
 
-def get_logger(logger_name, with_file=True, with_console=False):
+def get_logger(logger_name, with_file=False, with_console=True):
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.DEBUG)
     if with_console:

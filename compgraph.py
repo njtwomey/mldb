@@ -46,7 +46,7 @@ class ComputationGraph(object):
     >>> from mldb import ComputationGraph
     >>> graph = ComputationGraph()
     >>> node = graph.node(func=load_data)
-    >>> max_node = graph.node(func=max_row, data=node)
+    >>> max_node = graph.node(func=max_row, kwargs=dict(data=node))
     >>> max_node
     <NodeWrapper sources=[data] kwargs=[] factor=max_row sink=3d7a5b7d-48cc-4010-b1cc-05ad348714e0>
     >>> max_node.evaluate()
@@ -73,8 +73,8 @@ class ComputationGraph(object):
     >>> from mldb import ComputationGraph
     >>> graph = ComputationGraph()
     >>> node = graph.node(func=load_data)
-    >>> max_node = graph.node(func=max_row, data=node)
-    >>> max_node_times_3 = graph.node(func=scale_data, data=max_node, scale=3)
+    >>> max_node = graph.node(func=max_row, kwargs=dict(data=node)()
+    >>> max_node_times_3 = graph.node(func=scale_data, kwargs=dict(data=max_node, scale=3))
     >>> max_node_times_3
     <NodeWrapper sources=[data] kwargs=[scale] factor=scale_data sink=f1b3d6c0-deab-430a-9c6f-cdd6f2ff38e4>
     >>> max_node_times_3.evaluate()
@@ -83,10 +83,10 @@ class ComputationGraph(object):
 
     def __init__(self, name=None):
         """
-        
-        Args:
-            name: str, None
-                This defines the name of the graph.
+
+        Parameters
+        ----------
+        name
         """
 
         if name is None:
@@ -102,8 +102,9 @@ class ComputationGraph(object):
 
     def __repr__(self):
         """
-        
-        Returns:
+
+        Returns
+        -------
 
         """
 
@@ -111,17 +112,18 @@ class ComputationGraph(object):
 
     def add_backend(self, name, backend, default=False):
         """
-        
-        Args:
-            name:
-            backend:
-            default:
 
-        Returns:
+        Parameters
+        ----------
+        name
+        backend
+        default
+
+        Returns
+        -------
 
         """
 
-        logger.info(f"Adding backend {name} to list (currently: {self.backends.keys()})")
         if name in self.backends:
             msg = f"The backend {name} has already been added: {self.backends.keys()}"
             logger.critical(msg)
@@ -133,15 +135,15 @@ class ComputationGraph(object):
 
     def set_default_backend(self, backend_name):
         """
-        
-        Args:
-            backend_name:
 
-        Returns:
+        Parameters
+        ----------
+        backend_name
+
+        Returns
+        -------
 
         """
-
-        logger.info(f"Setting {backend_name} as the default backend.")
 
         if backend_name is None:
             logger.warn(f"Attempted to set new default backend, but specified backend is None ({backend_name})")
@@ -161,11 +163,13 @@ class ComputationGraph(object):
 
     def evaluate_all_nodes(self, force=False):
         """
-        
-        Args:
-            force:
 
-        Returns:
+        Parameters
+        ----------
+        force
+
+        Returns
+        -------
 
         """
 
@@ -176,18 +180,22 @@ class ComputationGraph(object):
             logger.info(f"Evaluating {node.name}")
             node.evaluate()
 
-    def node(self, func, name=None, backend=None, **kwargs):
+    def node(self, func, name=None, backend=None, kwargs=None):
         """
-        
-        Args:
-            func:
-            name:
-            backend:
-            **kwargs:
 
-        Returns: NodeWrapper object
+        Parameters
+        ----------
+        func
+        name
+        backend
+        kwargs
+
+        Returns
+        -------
             A wrapper around the computation of the node object.
-        Raises:
+
+        Raises
+        ------
             ValueError: if backend is None and the default backend hasn't been specified.
             KeyError: if the key 'name' is not found in the set of computed nodes.
         """
@@ -207,13 +215,12 @@ class ComputationGraph(object):
                 backend = self.default_backend
 
         if name not in self.nodes:
-            logger.info(f"Adding {name} to node list")
             self.nodes[name] = NodeWrapper(
                 graph=self,
                 name=name,
                 func=func,
                 backend=self.backends[backend],
-                **kwargs
+                kwargs=kwargs,
             )
 
         else:
@@ -225,15 +232,16 @@ class ComputationGraph(object):
 
 
 class NodeWrapper(object):
-    def __init__(self, graph, name, func, backend, **kwargs):
+    def __init__(self, graph, name, func, backend, kwargs):
         """
-        
-        Args:
-            graph:
-            name:
-            func:
-            backend:
-            **kwargs:
+
+        Parameters
+        ----------
+        graph
+        name
+        func
+        backend
+        kwargs
         """
 
         self.graph = graph
@@ -248,8 +256,9 @@ class NodeWrapper(object):
     @property
     def exists(self):
         """
-        
-        Returns:
+
+        Returns
+        -------
 
         """
 
@@ -258,10 +267,12 @@ class NodeWrapper(object):
     @property
     def sources(self):
         """
-        
-        Returns:
+
+        Returns
+        -------
 
         """
+
         return {
             kk: vv for kk, vv in self.kwargs.items() if isinstance(vv, NodeWrapper)
         }
@@ -269,18 +280,21 @@ class NodeWrapper(object):
     @property
     def keywords(self):
         """
-        
-        Returns:
+
+        Returns
+        -------
 
         """
+
         return {
             kk: vv for kk, vv in self.kwargs.items() if not isinstance(vv, NodeWrapper)
         }
 
     def __repr__(self):
         """
-        
-        Returns:
+
+        Returns
+        -------
 
         """
 
@@ -296,8 +310,9 @@ class NodeWrapper(object):
 
     def evaluate(self):
         """
-        
-        Returns:
+
+        Returns
+        -------
 
         """
 
@@ -307,35 +322,37 @@ class NodeWrapper(object):
             name=self.name,
             func=self.func,
             backend=self.backend,
-            **self.kwargs
+            kwargs=self.kwargs
         )
 
         return res
 
 
-def compute_or_load_evaluation(name, func, backend, **kwargs):
-    """
-    
-    Args:
-        name:
-        func:
-        backend:
-        **kwargs:
-
-    Returns:
-
+def compute_or_load_evaluation(name, func, backend, kwargs):
     """
 
-    # If the data is cached, return it
-    if name in compute_or_load_evaluation.cache:
-        logger.info(f"Loading cached result for {name}")
-        return compute_or_load_evaluation.cache[name]
+    Parameters
+    ----------
+    name
+    func
+    backend
+    kwargs
+
+    Returns
+    -------
+
+    """
 
     # Built a short name for printing purposes
     if isinstance(name, Path):
         name_short = name.resolve().relative_to(environ.get('BUILD_ROOT', '/'))
     else:
         name_short = name
+
+    # If the data is cached, return it
+    if name in compute_or_load_evaluation.cache:
+        logger.info(f'Loading {name_short} from local cache')
+        return compute_or_load_evaluation.cache[name]
 
     backend_interface = backend.get(name)
 
@@ -357,6 +374,7 @@ def compute_or_load_evaluation(name, func, backend, **kwargs):
 
             # Save data if not None
             if data is not None:
+                logger.info(f'Dumping {name_short} to file')
                 try:
                     backend_interface.save(data=data)
                 except Exception as ex:
@@ -365,6 +383,7 @@ def compute_or_load_evaluation(name, func, backend, **kwargs):
 
     else:
         try:
+            logger.info(f'Loading {name_short} from file')
             data = backend_interface.load()
         except Exception as ex:
             logger.exception(f"The following exception was raised when loading {name}: {ex}")
@@ -401,8 +420,8 @@ if __name__ == '__main__':
 
         graph = ComputationGraph()
         node = graph.node(func=load)
-        node_max = graph.node(func=max_row, data=node)
-        x3 = graph.node(func=times_x, data=node_max, x=3)
+        node_max = graph.node(func=max_row, kwargs=dict(data=node))
+        x3 = graph.node(func=times_x, kwargs=dict(data=node_max, x=3))
 
         long = graph.node(func=long_process, name='long_process_name')
 
