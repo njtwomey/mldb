@@ -48,16 +48,18 @@ graph.add_backend("pickle", PickleBackend("."))
 data = graph.node(func=load_data)
 
 # Extract features from the data
-max_feats = graph.node(func=max_row, data=data)
-min_feats = graph.node(func=min_row, data=data)
-ptp_feats = graph.node(func=ptp_row, data=data)
+max_feats = graph.node(func=max_row, kwargs=dict(data=data))
+min_feats = graph.node(func=min_row, kwargs=dict(data=data))
+ptp_feats = graph.node(func=ptp_row, kwargs=dict(data=data))
 
 # Aggregate the features and direct the output to the "pickle" backend
 feats = graph.node(
     func=concat, name="feats", backend="pickle",
-    max_feats=max_feats, 
-    min_feats=min_feats, 
-    ptp_feats=ptp_feats, 
+    kwargs=dict(
+        max_feats=max_feats, 
+        min_feats=min_feats, 
+        ptp_feats=ptp_feats, 
+    )
 )
 
 print(feats) 

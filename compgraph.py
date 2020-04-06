@@ -356,6 +356,9 @@ def compute_or_load_evaluation(name, func, backend, kwargs):
 
     backend_interface = backend.get(name)
 
+    if kwargs is None:
+        kwargs = dict()
+
     if not backend_interface.exists():
         with backend_interface.lock():
             # Build up dictionary of inputs

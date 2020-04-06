@@ -27,8 +27,7 @@ class FileSystemBase(Backend):
 
         self.ext = ext
         self.path = Path(path)
-
-        path.mkdir(parents=True, exist_ok=True)
+        self.path.mkdir(parents=True, exist_ok=True)
 
     def get(self, name, *args, **kwargs):
         path = self.path / f'{name}.{self.ext}'
