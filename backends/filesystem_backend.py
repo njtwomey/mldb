@@ -3,7 +3,8 @@ from pathlib import Path
 from mldb.backends.base import BackendInterface, Backend
 
 __all__ = [
-    'FileSystemInterface', 'FileSystemBase',
+    "FileSystemInterface",
+    "FileSystemBase",
 ]
 
 
@@ -30,5 +31,5 @@ class FileSystemBase(Backend):
         self.path.mkdir(parents=True, exist_ok=True)
 
     def get(self, name, *args, **kwargs):
-        path = self.path / f'{name}.{self.ext}'
+        path = self.path / f"{name}.{self.ext}"
         return self.interface(path, *args, **kwargs)

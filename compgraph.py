@@ -98,7 +98,7 @@ class ComputationGraph(object):
 
         self.default_backend = None
 
-        self.add_backend('none', VolatileBackend(), default=True)
+        self.add_backend("none", VolatileBackend(), default=True)
 
     def __repr__(self):
         """
@@ -146,7 +146,9 @@ class ComputationGraph(object):
         """
 
         if backend_name is None:
-            logger.warn(f"Attempted to set new default backend, but specified backend is None ({backend_name})")
+            logger.warn(
+                f"Attempted to set new default backend, but specified backend is None ({backend_name})"
+            )
             return
 
         if not isinstance(backend_name, str):
@@ -155,7 +157,7 @@ class ComputationGraph(object):
             raise TypeError(msg)
 
         if backend_name not in self.backends.keys():
-            msg = f'The backend {backend_name} is not found in {{{self.backends.keys()}}}'
+            msg = f"The backend {backend_name} is not found in {{{self.backends.keys()}}}"
             logger.critical(msg)
             raise KeyError(msg)
 
@@ -216,11 +218,7 @@ class ComputationGraph(object):
 
         if name not in self.nodes:
             self.nodes[name] = NodeWrapper(
-                graph=self,
-                name=name,
-                func=func,
-                backend=self.backends[backend],
-                kwargs=kwargs,
+                graph=self, name=name, func=func, backend=self.backends[backend], kwargs=kwargs,
             )
 
         else:
@@ -273,9 +271,7 @@ class NodeWrapper(object):
 
         """
 
-        return {
-            kk: vv for kk, vv in self.kwargs.items() if isinstance(vv, NodeWrapper)
-        }
+        return {kk: vv for kk, vv in self.kwargs.items() if isinstance(vv, NodeWrapper)}
 
     @property
     def keywords(self):
@@ -286,9 +282,7 @@ class NodeWrapper(object):
 
         """
 
-        return {
-            kk: vv for kk, vv in self.kwargs.items() if not isinstance(vv, NodeWrapper)
-        }
+        return {kk: vv for kk, vv in self.kwargs.items() if not isinstance(vv, NodeWrapper)}
 
     def __repr__(self):
         """
@@ -300,12 +294,12 @@ class NodeWrapper(object):
 
         func_name = self.func.__name__
 
-        return '<{} sources=[{}] kwargs=[{}] factor={} sink={}>'.format(
+        return "<{} sources=[{}] kwargs=[{}] factor={} sink={}>".format(
             self.__class__.__name__,
-            ','.join(self.sources.keys()) if self.sources else '',
-            ','.join(self.keywords.keys()) if self.sources else '',
+            ",".join(self.sources.keys()) if self.sources else "",
+            ",".join(self.keywords.keys()) if self.sources else "",
             func_name,
-            self.name
+            self.name,
         )
 
     def evaluate(self):
@@ -319,10 +313,7 @@ class NodeWrapper(object):
         # TODO: Consider adding backend.reserve so that independent processes won't concurrently evaluate
 
         res = compute_or_load_evaluation(
-            name=self.name,
-            func=self.func,
-            backend=self.backend,
-            kwargs=self.kwargs
+            name=self.name, func=self.func, backend=self.backend, kwargs=self.kwargs
         )
 
         return res
@@ -345,13 +336,13 @@ def compute_or_load_evaluation(name, func, backend, kwargs):
 
     # Built a short name for printing purposes
     if isinstance(name, Path):
-        name_short = name.resolve().relative_to(environ.get('BUILD_ROOT', '/'))
+        name_short = name.resolve().relative_to(environ.get("BUILD_ROOT", "/"))
     else:
         name_short = name
 
     # If the data is cached, return it
     if name in compute_or_load_evaluation.cache:
-        logger.info(f'Loading {name_short} from local cache')
+        logger.info(f"Loading {name_short} from local cache")
         return compute_or_load_evaluation.cache[name]
 
     backend_interface = backend.get(name)
@@ -368,7 +359,7 @@ def compute_or_load_evaluation(name, func, backend, kwargs):
                     inputs[key] = value.evaluate()
 
             # Calculate the output
-            logger.info(f'Calculating {name_short}')
+            logger.info(f"Calculating {name_short}")
             try:
                 data = func(**inputs)
             except Exception as ex:
@@ -377,7 +368,7 @@ def compute_or_load_evaluation(name, func, backend, kwargs):
 
             # Save data if not None
             if data is not None:
-                logger.info(f'Dumping {name_short} to file')
+                logger.info(f"Dumping {name_short} to file")
                 try:
                     backend_interface.save(data=data)
                 except Exception as ex:
@@ -386,25 +377,26 @@ def compute_or_load_evaluation(name, func, backend, kwargs):
 
     else:
         try:
-            logger.info(f'Loading {name_short} from file')
+            logger.info(f"Loading {name_short} from file")
             data = backend_interface.load()
         except Exception as ex:
             logger.exception(f"The following exception was raised when loading {name}: {ex}")
             raise ex
 
     # Determine whether to cache these results or not
-    cache_data = hasattr(backend, 'cache_data') and backend.cache_data
+    cache_data = hasattr(backend, "cache_data") and backend.cache_data
     if cache_data and data is not None:
         compute_or_load_evaluation.cache[name] = data
 
     return data
 
 
-if not hasattr(compute_or_load_evaluation, 'cache'):
+if not hasattr(compute_or_load_evaluation, "cache"):
     # TODO/FIXME: make a LRU cache with pre-defined storage capacity instead
     compute_or_load_evaluation.cache = {}
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+
     def main():
         from time import sleep
 
@@ -419,14 +411,14 @@ if __name__ == '__main__':
 
         def long_process():
             sleep(10)
-            return 'long process completed'
+            return "long process completed"
 
         graph = ComputationGraph()
         node = graph.node(func=load)
         node_max = graph.node(func=max_row, kwargs=dict(data=node))
         x3 = graph.node(func=times_x, kwargs=dict(data=node_max, x=3))
 
-        long = graph.node(func=long_process, name='long_process_name')
+        long = graph.node(func=long_process, name="long_process_name")
 
         print(node.evaluate())
         print(node_max.evaluate())
@@ -435,6 +427,5 @@ if __name__ == '__main__':
         print(node_max)
         print(x3)
         print(long.evaluate())
-
 
     main()

@@ -7,7 +7,8 @@ from pathlib import Path
 import fcntl
 
 __all__ = [
-    'FileLockExistsException', 'FileLock',
+    "FileLockExistsException",
+    "FileLock",
 ]
 
 
@@ -28,7 +29,7 @@ class FileLock(object):
         delay between each attempt to lock.
         """
         self.is_locked = False
-        self.lock_filename = Path(protected_file_path).with_suffix('.lock')
+        self.lock_filename = Path(protected_file_path).with_suffix(".lock")
         self.lock_file = None
 
     def locked(self):
@@ -53,12 +54,12 @@ class FileLock(object):
         # Attempt to create the lockfile.
         # These flags cause os.open to raise an OSError if the file already exists.
         try:
-            self.lock_file = open(self.lock_filename, 'w')
+            self.lock_file = open(self.lock_filename, "w")
             fcntl.flock(self.lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except FileNotFoundError:
             raise FileNotFoundError
         except IOError:
-            raise FileLockExistsException(f'The file {self.lock_filename} is currently in use.')
+            raise FileLockExistsException(f"The file {self.lock_filename} is currently in use.")
         self.is_locked = True
         return True
 

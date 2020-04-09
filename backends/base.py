@@ -3,7 +3,8 @@ from pathlib import Path
 from mldb.locker import FileLock, FileLockExistsException
 
 __all__ = [
-    'BackendInterface', 'Backend',
+    "BackendInterface",
+    "Backend",
 ]
 
 
@@ -33,7 +34,7 @@ class BackendInterface(object):
     ```
     
     """
-    
+
     def __init__(self, path, *args, **kwargs):
         """
         Instantiate the backend interface.
@@ -48,7 +49,7 @@ class BackendInterface(object):
                 Additional arguments that may be used by child implementations.
         """
         self.path = Path(path)
-    
+
     def exists(self):
         """
         This function tests the existence of the node data saved to `path`. This method is
@@ -64,7 +65,7 @@ class BackendInterface(object):
             Other exceptions from inherited implementations.
         """
         raise NotImplementedError
-    
+
     def load(self):
         """
         If the node data identified by path exists, its contents loaded and returned by
@@ -80,7 +81,7 @@ class BackendInterface(object):
             Other exceptions from inherited implementations.
         """
         raise NotImplementedError
-    
+
     def save(self, data):
         """
         The contents of `data` are saved to the identifier at `path`.
@@ -95,7 +96,7 @@ class BackendInterface(object):
             Other exceptions from inherited implementations.
         """
         raise NotImplementedError
-    
+
     def delete(self):
         """
         Deletes the contents of `path`
@@ -107,7 +108,7 @@ class BackendInterface(object):
             Other exceptions from inherited implementations.
         """
         raise NotImplementedError
-    
+
     def lock(self):
         """
         Returns a `FileLock` object that can be handled with Python's `with` statement.
@@ -122,7 +123,7 @@ class BackendInterface(object):
         """
         self.prepare()
         return FileLock(self.path)
-    
+
     def prepare(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -131,7 +132,7 @@ class Backend(object):
     """
     This class manages the serialisation, de-serialisation, deletion, and locking of node data.
     """
-    
+
     def __init__(self, interface, cache_data=True):
         """
         Instantiates the backend.
@@ -145,7 +146,7 @@ class Backend(object):
         """
         self.cache_data = cache_data
         self.interface = interface
-    
+
     def get(self, name, *args, **kwargs):
         """
         Create an interface to the exists/load/save/lock functions for a node backend.
