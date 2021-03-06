@@ -1,6 +1,8 @@
 import json
 from pprint import pformat
 
+import numpy as np
+
 from mldb.backends.filesystem_backend import FileSystemBase
 from mldb.backends.filesystem_backend import FileSystemInterface
 
@@ -8,6 +10,20 @@ __all__ = [
     "JsonInterface",
     "JsonBackend",
 ]
+
+
+# Solve errors in serialising numpy types to JSON, via:
+# https://stackoverflow.com/questions/50916422/python-typeerror-object-of-type-int64-is-not-json-serializable
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(NpEncoder, self).default(obj)
 
 
 def prettify_json(data, json_kwargs):
@@ -35,7 +51,7 @@ class JsonInterface(FileSystemInterface):
             if self.pprint:
                 fil.write(prettify_json(data, self.json_kwargs))
             else:
-                json.dump(data, fil, **self.json_kwargs)
+                json.dump(data, fil, **self.json_kwargs, cls=NpEncoder)
 
 
 class JsonBackend(FileSystemBase):
