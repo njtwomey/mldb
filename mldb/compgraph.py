@@ -1,7 +1,8 @@
-from loguru import logger
 from os import environ
 from pathlib import Path
 from uuid import uuid4
+
+from loguru import logger
 
 from mldb.backends import VolatileBackend
 
@@ -144,9 +145,7 @@ class ComputationGraph(object):
         """
 
         if backend_name is None:
-            logger.warn(
-                f"Attempted to set new default backend, but specified backend is None ({backend_name})"
-            )
+            logger.warn(f"Attempted to set new default backend, but specified backend is None ({backend_name})")
             return
 
         if not isinstance(backend_name, str):
@@ -310,9 +309,7 @@ class NodeWrapper(object):
 
         # TODO: Consider adding backend.reserve so that independent processes won't concurrently evaluate
 
-        res = compute_or_load_evaluation(
-            name=self.name, func=self.func, backend=self.backend, kwargs=self.kwargs
-        )
+        res = compute_or_load_evaluation(name=self.name, func=self.func, backend=self.backend, kwargs=self.kwargs)
 
         return res
 

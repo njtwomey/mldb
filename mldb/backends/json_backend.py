@@ -1,7 +1,8 @@
 import json
 from pprint import pformat
 
-from mldb.backends.filesystem_backend import FileSystemBase, FileSystemInterface
+from mldb.backends.filesystem_backend import FileSystemBase
+from mldb.backends.filesystem_backend import FileSystemInterface
 
 __all__ = [
     "JsonInterface",

@@ -1,9 +1,10 @@
 from numpy import load as np_load
-from numpy import save as np_save
 from numpy import ndarray
+from numpy import save as np_save
 
+from mldb.backends.filesystem_backend import FileSystemBase
+from mldb.backends.filesystem_backend import FileSystemInterface
 from mldb.backends.validation import validate_dtype
-from mldb.backends.filesystem_backend import FileSystemInterface, FileSystemBase
 
 __all__ = ["NumpyInterface", "NumpyBackend"]
 

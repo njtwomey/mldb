@@ -1,31 +1,32 @@
 import numpy as np
 
-from mldb import ComputationGraph, PickleBackend
+from mldb import ComputationGraph
+from mldb import PickleBackend
 
 
 def load_data(N, D, rng):
-    print('load_data')
+    print("load_data")
     return rng.normal(0, 1, (N, D))
 
 
 def extract_features(data, features):
-    print('extract_features')
+    print("extract_features")
     return np.concatenate([feat(data, axis=1, keepdims=True) for feat in features], axis=1)
 
 
 def get_weights(D):
-    print('get_weights')
+    print("get_weights")
     return np.random.normal(0, 1, (D, 1)) / 4, 0.5
 
 
 def dot_add(feats, wb):
-    print('dot_add')
+    print("dot_add")
     w, b = wb
     return feats.dot(w) + b
 
 
 def sigmoid(z_score):
-    print('sigmoid')
+    print("sigmoid")
     return 1.0 / (1.0 + np.exp(-z_score))
 
 
@@ -42,6 +43,7 @@ data = graph.node(func=load_data, kwargs=dict(rng=rng, N=10000, D=3))
 
 # Extract features from the data
 features = graph.node(func=extract_features, kwargs=dict(data=data, features=feat_funcs))
+
 
 # Generate parameters for a linear model
 params = graph.node(func=get_weights, kwargs=dict(D=len(feat_funcs)))

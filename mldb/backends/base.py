@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from mldb.locker import FileLock, FileLockExistsException
+from mldb.locker import FileLock
+from mldb.locker import FileLockExistsException
 
 __all__ = [
     "BackendInterface",

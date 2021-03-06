@@ -2,9 +2,8 @@
 #   https://github.com/ilastik/lazyflow/blob/master/lazyflow/utility/fileLock.py
 # The modifications introduced are to simply raise a FileLockExistsException if the lock file exists
 # without attempting to re-lock and to use pathlib. Repeated attempts ought to be made by the main file.
-
-from pathlib import Path
 import fcntl
+from pathlib import Path
 
 __all__ = [
     "FileLockExistsException",

@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from mldb.backends.base import BackendInterface, Backend
+from mldb.backends.base import Backend
+from mldb.backends.base import BackendInterface
 
 __all__ = [
     "FileSystemInterface",

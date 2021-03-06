@@ -11,6 +11,8 @@ joblib = "*"
 numpy = "*"
 pandas = "*"
 matplotlib = "*"
+pre-commit = "*"
+loguru = "*"
 
 [requires]
 python_version = "3.8"

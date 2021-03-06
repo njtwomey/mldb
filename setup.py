@@ -2,6 +2,7 @@ from distutils.util import convert_path
 
 import setuptools
 
+
 # Load the readme
 with open("README.md", "r") as fh:
     long_description = fh.read()

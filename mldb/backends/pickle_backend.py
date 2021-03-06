@@ -1,6 +1,7 @@
 import pickle
 
-from mldb.backends.filesystem_backend import FileSystemInterface, FileSystemBase
+from mldb.backends.filesystem_backend import FileSystemBase
+from mldb.backends.filesystem_backend import FileSystemInterface
 
 __all__ = [
     "PickleBackend",

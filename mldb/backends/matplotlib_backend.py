@@ -1,7 +1,8 @@
 from matplotlib.pyplot import Figure
 
+from mldb.backends.filesystem_backend import FileSystemBase
+from mldb.backends.filesystem_backend import FileSystemInterface
 from mldb.backends.validation import validate_dtype
-from mldb.backends.filesystem_backend import FileSystemInterface, FileSystemBase
 
 __all__ = ["MatPlotLibInterface", "MatPlotLibBackend", "PNGBackend", "PDFBackend"]
 

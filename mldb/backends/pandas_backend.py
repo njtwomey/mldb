@@ -1,8 +1,9 @@
 from pandas import DataFrame
 from pandas import read_pickle as pd_load
 
+from mldb.backends.filesystem_backend import FileSystemBase
+from mldb.backends.filesystem_backend import FileSystemInterface
 from mldb.backends.validation import validate_dtype
-from mldb.backends.filesystem_backend import FileSystemInterface, FileSystemBase
 
 __all__ = ["PandasBackend", "PandasInterface"]
 
