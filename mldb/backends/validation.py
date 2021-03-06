@@ -1,6 +1,4 @@
-from mldb.logger import get_logger
-
-logger = get_logger(__name__)
+from loguru import logger
 
 __all__ = ["validate_dtype"]
 

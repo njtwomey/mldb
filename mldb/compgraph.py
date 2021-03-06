@@ -1,11 +1,9 @@
+from loguru import logger
 from os import environ
 from pathlib import Path
 from uuid import uuid4
 
 from mldb.backends import VolatileBackend
-from mldb.logger import get_logger
-
-logger = get_logger(__name__)
 
 
 class ComputationGraph(object):
@@ -246,7 +244,7 @@ class NodeWrapper(object):
 
         self.name = name
 
-        self.kwargs = kwargs
+        self.kwargs = dict() if kwargs is None else kwargs
         self.func = func
 
         self.backend = backend

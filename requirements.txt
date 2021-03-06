@@ -3,4 +3,5 @@ joblib
 numpy
 pandas
 matplotlib
-pickle
+pre-commit
+loguru
