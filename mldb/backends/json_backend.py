@@ -51,7 +51,7 @@ class JsonInterface(FileSystemInterface):
             if self.pprint:
                 fil.write(prettify_json(data, self.json_kwargs))
             else:
-                json.dump(data, fil, **self.json_kwargs, cls=NpEncoder)
+                json.dump(data, fil, **self.json_kwargs)
 
 
 class JsonBackend(FileSystemBase):
