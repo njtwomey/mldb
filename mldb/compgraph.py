@@ -115,9 +115,8 @@ class ComputationGraph(object):
 
         name = self.name
         nodes = sorted(list(self.nodes.keys()))
-        backends = sorted(list(self.backends.keys()))
 
-        return f"{self.__class__.__name__}({name=}, {nodes=}, {backends=})"
+        return f"{self.__class__.__name__}({name=}, {nodes=})"
 
     def add_backend(self, name: str, backend: Backend, make_default: bool = False) -> None:
         """
