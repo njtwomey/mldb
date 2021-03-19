@@ -1,4 +1,6 @@
 from pathlib import Path
+from typing import Any
+from typing import Type
 
 from mldb.locker import FileLock
 from mldb.locker import FileLockExistsException
@@ -22,25 +24,26 @@ class BackendInterface(object):
     Each of these member functions must be specialised by child backend objects. For example, if
     considering a file-system backend, the `exists` function could test the whether a file
     exists. Backends are primarily designed to provide guarantees of the serialised data types.
-    
+
     The lock function is not abstract and it creates a lockfile object. The scope of the lock is
     best managed with a with statement. For example, a file called `test.lock` will be created
     upon `__enter__` and this will be unlinked when `__exit__` is called. If the file `test.lock`
     already exists, a `mldb.locker.FileLockExistsException` will be raised.
-    
+
     ```python
     interface = BackendInterface(name='test')
     with interface.lock():
         pass
     ```
-    
+
     """
 
-    def __init__(self, path, *args, **kwargs):
+    def __init__(self, path: str, *args, **kwargs):
         """
         Instantiate the backend interface.
-        
-        Args:
+
+        Parameters
+        ----------
             path: string
                 The argument `path` is a string that uniquely defines the node that is being
                 queried.
@@ -49,83 +52,107 @@ class BackendInterface(object):
             **kwargs: **dict
                 Additional arguments that may be used by child implementations.
         """
+
         self.path = Path(path)
 
-    def exists(self):
+    def exists(self) -> bool:
         """
         This function tests the existence of the node data saved to `path`. This method is
         abstract even though this library is ostensibly aimed towards filesystem serialisation.
         Abstraction may allow for more specialised serialisation if needed, for example derived
         implementations of this function could execute database queries.
 
-        Returns: bool
+        Returns
+        -------
             This function returns `True` if the node data exists, and `False` otherwise.
-            
-        Raises:
+
+        Raises
+        ------
             NotImplementedError if the function is not over-written.
             Other exceptions from inherited implementations.
         """
+
         raise NotImplementedError
 
-    def load(self):
+    def load(self) -> Any:
         """
         If the node data identified by path exists, its contents loaded and returned by
         this function.
 
-        Returns: data
+        Returns
+        -------
             The contents of the node data. The type is not specified, but should be tested
             and verified by child classes.
-            
-        Raises:
+
+        Raises
+        ------
             FileNotFoundError: if the file does not exist.
             NotImplementedError: if the function is not over-written.
             Other exceptions from inherited implementations.
         """
+
         raise NotImplementedError
 
-    def save(self, data):
+    def save(self, data: Any) -> None:
         """
         The contents of `data` are saved to the identifier at `path`.
 
-        Args:
+        Parameters
+        ----------
             data: The data to be saved; type not specified
 
-        Returns: None
+        Returns
+        -------
+            None
 
         Raises:
             NotImplementedError if the function is not over-written.
             Other exceptions from inherited implementations.
         """
+
         raise NotImplementedError
 
-    def delete(self):
+    def delete(self) -> None:
         """
         Deletes the contents of `path`
 
-        Returns: None
-        
-        Raises:
+        Returns
+        -------
+            None
+
+        Raises
+        ------
             NotImplementedError if the function is not over-written.
             Other exceptions from inherited implementations.
         """
+
         raise NotImplementedError
 
-    def lock(self):
+    def lock(self) -> FileLock:
         """
         Returns a `FileLock` object that can be handled with Python's `with` statement.
 
-        Returns: FileLock
-            If not used in conjunction of a `with` statement, the behaviour can be managed
-            by manually calling `lock.acquire()` and `lock.release()`. Preferred usage is
-            the `with` statement.
-
-        Raises:
-            FileLockExistsException if the
+        Returns
+        -------
+            FileLock:
+                If not used in conjunction of a `with` statement, the behaviour can be managed
+                by manually calling `lock.acquire()` and `lock.release()`. Preferred usage is
+                the `with` statement.
         """
+
         self.prepare()
+
         return FileLock(self.path)
 
-    def prepare(self):
+    def prepare(self) -> None:
+        """
+        Ensures that the path exists before saving
+
+        Returns
+        -------
+        None
+        """
+
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
 
@@ -134,30 +161,34 @@ class Backend(object):
     This class manages the serialisation, de-serialisation, deletion, and locking of node data.
     """
 
-    def __init__(self, interface, cache_data=True):
+    def __init__(self, interface: Type[BackendInterface], cache_data: bool = True):
         """
         Instantiates the backend.
 
-        Args:
+        Parameters
+        ----------
             interface: BackendInterface
                 The interface of the backend
             cache_data: bool
                 If `True`, the result of the evaluation is cached locally in memory. Otherwise the
                 resultant computation is not.
         """
+
         self.cache_data = cache_data
         self.interface = interface
 
-    def get(self, name, *args, **kwargs):
+    def get(self, name: str, *args, **kwargs) -> BackendInterface:
         """
-        Create an interface to the exists/load/save/lock functions for a node backend.
-
-        Args:
+        Parameters
+        ----------
             name: str
                 The unique name of the node.
             *args: Additional arguments for the Interface object.
             **kwargs: Additional keywords for the Interface object.
 
-        Returns: BackendInterface
+        Returns
+        -------
+        BackendInterface
         """
+
         return self.interface(name, *args, **kwargs)
