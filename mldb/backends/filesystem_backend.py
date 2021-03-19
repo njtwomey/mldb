@@ -22,6 +22,12 @@ class FileSystemInterface(BackendInterface):
     def delete(self):
         return self.path.unlink()
 
+    def load(self):
+        raise NotImplementedError
+
+    def save(self, data):
+        raise NotImplementedError
+
 
 class FileSystemBase(Backend):
     def __init__(self, interface, path, ext):

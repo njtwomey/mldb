@@ -1,9 +1,16 @@
+from functools import partial
 from os import environ
 from pathlib import Path
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import Optional
+from typing import Union
 from uuid import uuid4
 
 from loguru import logger
 
+from mldb.backends import Backend
 from mldb.backends import VolatileBackend
 
 
@@ -13,29 +20,29 @@ class ComputationGraph(object):
     and local caching of data. With this class, one can define complex computational chains that
     begin with raw data (eg from file) and output predictive models and performance evaluation
     metrics that may be saved to file if desired.
-    
+
     The following illustrates basic usage of the library. The `load_data` function itself would
     ordinarily perform a more complex operation than returning such a small amount of data. For
     example, it may load a whole dataset and set of labels to file.
-    
+
     >>> def load_data():
     ...     return [[1, 2, 3], [4, 5, 6]]
     ...
     >>> from mldb import ComputationGraph
     >>> graph = ComputationGraph()
-    >>> node = graph.node(func=load_data)
-    >>> node
+    >>> node = graph.make_node(func=load_data)
+    >>> make_node
     <NodeWrapper sources=[] kwargs=[] factor=load_data sink=d16d98ef-2efc-41ef-b2e5-96738689c970>
-    >>> node.evaluate()
+    >>> make_node.evaluate()
     [[1, 2, 3], [4, 5, 6]]
 
     Line 4 defines a NodeWrapper object that is evaluated on Line 6. Note, the name for the node is
     given by the UUID package. An optional `name` parameter should be added if the name is to be
     identifiable.
-    
+
     More complex relationships can be encoded. For example, the maximum over the rows of the data
     returned from `load_data` can be extracted by:
-    
+
     >>> def load_data():
     ...     return [[1, 2, 3], [4, 5, 6]]
     ...
@@ -44,8 +51,8 @@ class ComputationGraph(object):
     ...
     >>> from mldb import ComputationGraph
     >>> graph = ComputationGraph()
-    >>> node = graph.node(func=load_data)
-    >>> max_node = graph.node(func=max_row, kwargs=dict(data=node))
+    >>> node = graph.make_node(func=load_data)
+    >>> max_node = graph.make_node(func=max_row, kwargs=dict(data=make_node))
     >>> max_node
     <NodeWrapper sources=[data] kwargs=[] factor=max_row sink=3d7a5b7d-48cc-4010-b1cc-05ad348714e0>
     >>> max_node.evaluate()
@@ -54,7 +61,7 @@ class ComputationGraph(object):
     Note, that it was not necessary to directly call `evaluate()` on the node object. This is because the
     internal logic of the `evaluate` member function traverse the computational graph and automatically
     evaluates the intermediate nodes.
-    
+
     This library allows additional (non-NodeWrapper) key words to be passed into the function too. In the
     following example, the function multiplies the data by a particular value `x` that is not known in
     advance. The value of `x` is specified in the `kwargs` argument of ComputationGraph.node (as opposed to
@@ -71,250 +78,264 @@ class ComputationGraph(object):
     ...
     >>> from mldb import ComputationGraph
     >>> graph = ComputationGraph()
-    >>> node = graph.node(func=load_data)
-    >>> max_node = graph.node(func=max_row, kwargs=dict(data=node)()
-    >>> max_node_times_3 = graph.node(func=scale_data, kwargs=dict(data=max_node, scale=3))
+    >>> node = graph.make_node(func=load_data)
+    >>> max_node = graph.make_node(func=max_row, kwargs=dict(data=make_node)()
+    >>> max_node_times_3 = graph.make_node(func=scale_data, kwargs=dict(data=max_node, scale=3))
     >>> max_node_times_3
     <NodeWrapper sources=[data] kwargs=[scale] factor=scale_data sink=f1b3d6c0-deab-430a-9c6f-cdd6f2ff38e4>
     >>> max_node_times_3.evaluate()
     [9, 18]
     """
 
-    def __init__(self, name=None):
+    def __init__(self, name: Optional[str] = None):
         """
+        A computational graph that acts as a container for `NodeWrapper`s.
 
         Parameters
         ----------
-        name
+        name: Optional[str] (default=None)
+            This optional parameter gives a name to the collection of nodes. If None, a random uuid64
+            string will be generated for the collection.
+
         """
 
         if name is None:
             name = str(uuid4())
 
-        self.name = name.lower()
-        self.backends = dict()
-        self.nodes = dict()
+        self.name: str = name.lower()
+        self.backends: Dict[str, Backend] = dict()
+        self.nodes: Dict[str, NodeWrapper] = dict()
 
-        self.default_backend = None
+        self.default_backend: Optional[str] = None
 
-        self.add_backend("none", VolatileBackend(), default=True)
+        self.add_backend("none", VolatileBackend(), make_default=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """Represent the graph string"""
+
+        name = self.name
+        nodes = sorted(list(self.nodes.keys()))
+        backends = sorted(list(self.backends.keys()))
+
+        return f"{self.__class__.__name__}({name=}, {nodes=}, {backends=})"
+
+    def add_backend(self, name: str, backend: Backend, make_default: bool = False) -> None:
         """
-
-        Returns
-        -------
-
-        """
-
-        return f"<{self.__class__.__name__} name={self.name}>"
-
-    def add_backend(self, name, backend, default=False):
-        """
+        This function adds a backend to the collection, affording the capability to serialise
+        and deserialise the data to file.
 
         Parameters
         ----------
-        name
-        backend
-        default
+        name: str
+            The name of the backend (e.g. "none", "png", "json", etc)
+        backend: Backend
+            This is the instantiation of a backend object
+        make_default: bool (default=False)
+            If True, this will become the default backend for all created nodes.
 
         Returns
         -------
-
+        None
         """
+
+        if not isinstance(name, str):
+            logger.exception(f"The backend_name parameter must be a string. Got {type(name)} as {name}")
+            raise TypeError
 
         if name in self.backends:
-            msg = f"The backend {name} has already been added: {self.backends.keys()}"
-            logger.critical(msg)
-            raise KeyError(msg)
+            logger.exception(f"The backend {name} has already been added: {self.backends.keys()}")
+            raise KeyError
 
         self.backends[name] = backend
-        if default:
+
+        if make_default:
             self.set_default_backend(name)
 
-    def set_default_backend(self, backend_name):
+    def set_default_backend(self, backend_name: str) -> None:
         """
+        Specify the default backend
 
         Parameters
         ----------
-        backend_name
+        backend_name: str
+            The name of the default backend. Must be a key of `self.backends`
 
         Returns
         -------
+        None
 
         """
 
-        if backend_name is None:
-            logger.warn(f"Attempted to set new default backend, but specified backend is None ({backend_name})")
-            return
-
         if not isinstance(backend_name, str):
-            msg = f"The backend_name parameter must be a string. Got {type(backend_name)} as {backend_name}"
-            logger.critical(msg)
-            raise TypeError(msg)
+            logger.exception(f"The backend_name parameter must be a string. Got {type(backend_name)} as {backend_name}")
+            raise TypeError
 
         if backend_name not in self.backends.keys():
-            msg = f"The backend {backend_name} is not found in {{{self.backends.keys()}}}"
-            logger.critical(msg)
-            raise KeyError(msg)
+            logger.exception(f"The backend {backend_name} is not found in {self.backends.keys()}.")
+            raise KeyError
 
         self.default_backend = backend_name
 
-    def evaluate_all_nodes(self, force=False):
+    def evaluate(self, force: bool = False) -> Dict[str, Any]:
         """
+        Iterate through all nodes and evaluate their values.
 
         Parameters
         ----------
-        force
+        force: bool (default=False)
 
         Returns
         -------
-
+        None
         """
 
-        for node in self.nodes.values():
-            if node.exists:
-                if not force:
-                    continue
-            logger.info(f"Evaluating {node.name}")
-            node.evaluate()
+        evaluations = dict()
 
-    def node(self, func, name=None, backend=None, kwargs=None):
+        for key, node in self.nodes.items():
+            if node.exists and not force:
+                continue
+            logger.info(f"Evaluating {key}...")
+            evaluations[key] = node.evaluate()
+
+        return evaluations
+
+    def make_node(
+        self,
+        func: Callable,
+        name: Union[str, Path] = None,
+        backend: str = None,
+        kwargs: Dict[str, Any] = None,
+        cache: bool = True,
+    ) -> "NodeWrapper":
         """
+        This function generates a new Node wrapper
 
         Parameters
         ----------
-        func
-        name
-        backend
-        kwargs
+        func: Callable
+            This is the function that is to be wrapped.
+        name: Optional[str] (default=None)
+            This is the name of the node that is to be created. If `cache is True`, the node
+            will be stored under `ComputationGraph.nodes[name]`
+        backend: Optional[Union[Backend, str]] (default=None)
+            This argument defines the interface for how the return value of `func` will be serialised/deserialised.
+            If it is a string, the value will be looked up from `self.backends`, if it's an instance of Bakend,
+            it will be used directly, unless `cache is True` wherein no backend will be used.
+        kwargs: Optional[str] (default=None)
+            This dictionary specifies the aruguments that are to be passed into `func`.
+        cache: bool (default=True)
 
         Returns
         -------
-            A wrapper around the computation of the node object.
+        node: NodeWrapper
+            This is the newly created lazy evaluation object
 
-        Raises
-        ------
-            ValueError: if backend is None and the default backend hasn't been specified.
-            KeyError: if the key 'name' is not found in the set of computed nodes.
         """
+
+        assert callable(func)
 
         if name is None:
             name = str(uuid4())
-        if backend is None:
-            backend = self.default_backend
-        if backend is None:
-            if not len(self.backends):
-                msg = f"No backends have been defined in the ComputationalGraph, terminating."
-                logger.critical(msg)
-                raise ValueError(msg)
-            else:
-                logger.info(f"Defaulting to the first backend as default: {self.backends.keys()}")
-                self.set_default_backend(next(self.backends.keys()))
-                backend = self.default_backend
 
-        if name not in self.nodes:
-            self.nodes[name] = NodeWrapper(
-                graph=self, name=name, func=func, backend=self.backends[backend], kwargs=kwargs,
-            )
+        if name in self.nodes:
+            raise KeyError(f"A node with '{name}' name already exists in {self.nodes.keys()}")
 
-        else:
-            msg = f"An attempt to add node {name} was made, but this node already exists"
-            logger.critical(msg)
-            raise KeyError(msg)
+        if backend is not Backend:
+            if backend is None:
+                backend = self.backends[self.default_backend]
+            elif isinstance(backend, str):
+                backend = self.backends[backend]
 
-        return self.nodes[name]
+        if not cache:
+            backend = self.backends["none"]
+
+        node = NodeWrapper(parent=self, name=name, func=func, backend=backend, kwargs=kwargs,)
+
+        if cache:
+            self.nodes[name] = node
+
+        return node
+
+
+def get_function_name(func: Callable) -> str:
+    """This function takes a callable function and attempts to extract a string name for it."""
+
+    if isinstance(func, partial):
+        func = func.func.__self__.func
+
+    return func.__name__
 
 
 class NodeWrapper(object):
-    def __init__(self, graph, name, func, backend, kwargs):
+    def __init__(
+        self,
+        parent: ComputationGraph,
+        name: str,
+        func: Callable,
+        backend: Backend,
+        kwargs: Optional[Dict[str, Any]] = None,
+    ):
         """
 
         Parameters
         ----------
-        graph
-        name
-        func
-        backend
-        kwargs
+        parent: ComputationGraph
+            The parent computational graph associated
+        name: str
+        func: Callable
+        backend: Backend
+        kwargs: Optional[Dict[str, Any]]
         """
 
-        self.graph = graph
+        self.parent: "ComputationGraph" = parent
 
-        self.name = name
+        self.name: str = name
 
-        self.kwargs = dict() if kwargs is None else kwargs
-        self.func = func
+        self.kwargs: Dict[str, Any] = dict() if kwargs is None else kwargs
+        self.func: Callable = func
 
-        self.backend = backend
+        self.backend: Backend = backend
+
+    def __repr__(self) -> str:
+        func = get_function_name(self.func)
+        sources = list(self.sources.keys())
+        kwargs = list(self.keywords.keys())
+
+        return f"{self.__class__.__name__}({sources=}, {func=}, {kwargs=})"
 
     @property
-    def exists(self):
-        """
-
-        Returns
-        -------
-
-        """
+    def exists(self) -> bool:
+        """A wrapper around the backend object to determine if the computation of `self.func` exists already."""
 
         return self.backend.get(self.name).exists()
 
     @property
-    def sources(self):
-        """
-
-        Returns
-        -------
-
-        """
+    def sources(self) -> Dict[str, "NodeWrapper"]:
+        """A convenience function to get the sources (i.e. the arguments for `self.func` that are `NodeWrapper`'s)."""
 
         return {kk: vv for kk, vv in self.kwargs.items() if isinstance(vv, NodeWrapper)}
 
     @property
-    def keywords(self):
-        """
-
-        Returns
-        -------
-
-        """
+    def keywords(self) -> Dict[str, Any]:
+        """A convenience function to get non`NodeWrapper` keyword arguments for `self.func`."""
 
         return {kk: vv for kk, vv in self.kwargs.items() if not isinstance(vv, NodeWrapper)}
 
-    def __repr__(self):
+    def evaluate(self) -> Any:
         """
+        This function evaluates `self.func` with `self.kwargs`. If this has already been called, the cached version
+        (from an LRU cache) or the serialised version (via the backend) will be returned instead. If the evaluation
+        has not been done before, the evaluation will be
 
         Returns
         -------
-
+        Any: the return value of `self.func`.
         """
 
-        func_name = self.func.__name__
-
-        return "<{} sources=[{}] kwargs=[{}] factor={} sink={}>".format(
-            self.__class__.__name__,
-            ",".join(self.sources.keys()) if self.sources else "",
-            ",".join(self.keywords.keys()) if self.sources else "",
-            func_name,
-            self.name,
-        )
-
-    def evaluate(self):
-        """
-
-        Returns
-        -------
-
-        """
-
-        # TODO: Consider adding backend.reserve so that independent processes won't concurrently evaluate
-
-        res = compute_or_load_evaluation(name=self.name, func=self.func, backend=self.backend, kwargs=self.kwargs)
-
-        return res
+        return compute_or_load_evaluation(name=self.name, func=self.func, backend=self.backend, kwargs=self.kwargs)
 
 
-def compute_or_load_evaluation(name, func, backend, kwargs):
+def compute_or_load_evaluation(name: str, func: Callable, backend: Backend, kwargs: Dict[str, Any]):
     """
 
     Parameters
@@ -409,11 +430,11 @@ if __name__ == "__main__":
             return "long process completed"
 
         graph = ComputationGraph()
-        node = graph.node(func=load)
-        node_max = graph.node(func=max_row, kwargs=dict(data=node))
-        x3 = graph.node(func=times_x, kwargs=dict(data=node_max, x=3))
+        node = graph.make_node(func=load)
+        node_max = graph.make_node(func=max_row, kwargs=dict(data=node))
+        x3 = graph.make_node(func=times_x, kwargs=dict(data=node_max, x=3))
 
-        long = graph.node(func=long_process, name="long_process_name")
+        long = graph.make_node(func=long_process, name="long_process_name")
 
         print(node.evaluate())
         print(node_max.evaluate())

@@ -6,3 +6,4 @@ matplotlib
 pre-commit
 loguru
 pre-commit
+pyyaml

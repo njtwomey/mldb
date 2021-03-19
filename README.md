@@ -45,15 +45,15 @@ graph = ComputationGraph()
 graph.add_backend("pickle", PickleBackend("."))
 
 # Load the data
-data = graph.node(func=load_data)
+data = graph.make_node(func=load_data)
 
 # Extract features from the data
-max_feats = graph.node(func=max_row, kwargs=dict(data=data))
-min_feats = graph.node(func=min_row, kwargs=dict(data=data))
-ptp_feats = graph.node(func=ptp_row, kwargs=dict(data=data))
+max_feats = graph.make_node(func=max_row, kwargs=dict(data=data))
+min_feats = graph.make_node(func=min_row, kwargs=dict(data=data))
+ptp_feats = graph.make_node(func=ptp_row, kwargs=dict(data=data))
 
 # Aggregate the features and direct the output to the "pickle" backend
-feats = graph.node(
+feats = graph.make_node(
     func=concat, name="feats", backend="pickle",
     kwargs=dict(
         max_feats=max_feats, 

@@ -36,23 +36,23 @@ feat_funcs = [np.min, np.max, np.std, np.mean, np.median, np.ptp]
 graph = ComputationGraph()
 
 # Define a random seed
-rng = graph.node(func=lambda: np.random.RandomState(1234))
+rng = graph.make_node(func=lambda: np.random.RandomState(1234))
 
 # Generate some random data
-data = graph.node(func=load_data, kwargs=dict(rng=rng, N=10000, D=3))
+data = graph.make_node(func=load_data, kwargs=dict(rng=rng, N=10000, D=3))
 
 # Extract features from the data
-features = graph.node(func=extract_features, kwargs=dict(data=data, features=feat_funcs))
+features = graph.make_node(func=extract_features, kwargs=dict(data=data, features=feat_funcs))
 
 
 # Generate parameters for a linear model
-params = graph.node(func=get_weights, kwargs=dict(D=len(feat_funcs)))
+params = graph.make_node(func=get_weights, kwargs=dict(D=len(feat_funcs)))
 
 # Inner product between features and weights
-z_score = graph.node(func=dot_add, kwargs=dict(feats=features, wb=params))
+z_score = graph.make_node(func=dot_add, kwargs=dict(feats=features, wb=params))
 
 # Go from the score to the predictions
-predictions = graph.node(func=sigmoid, kwargs=dict(z_score=z_score))
+predictions = graph.make_node(func=sigmoid, kwargs=dict(z_score=z_score))
 
 
 for key, value in graph.nodes.items():
