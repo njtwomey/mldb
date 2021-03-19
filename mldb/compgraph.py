@@ -268,23 +268,24 @@ def get_function_name(func: Callable) -> str:
 
 class NodeWrapper(object):
     def __init__(
-        self,
-        parent: ComputationGraph,
-        name: str,
-        func: Callable,
-        backend: Backend,
-        kwargs: Optional[Dict[str, Any]] = None,
+        self, parent: ComputationGraph, name: str, func: Callable, kwargs: Optional[Dict[str, Any]], backend: Backend,
     ):
         """
+        This class provides the light wrapper around lazy evaluation/serialisation/de-serialisation with the
+        func, kwargs, and backend
 
         Parameters
         ----------
         parent: ComputationGraph
-            The parent computational graph associated
+            The parent computational graph of which this node is a child.
         name: str
+            The name of the node
         func: Callable
-        backend: Backend
+            The function that will be evaluated, and whose output is cached via the backend.v
         kwargs: Optional[Dict[str, Any]]
+            The keywords for the function.
+        backend: Backend
+            A Backend instance that facilitates serialisation/de-serialisation of data
         """
 
         self.parent: "ComputationGraph" = parent
@@ -297,6 +298,8 @@ class NodeWrapper(object):
         self.backend: Backend = backend
 
     def __repr__(self) -> str:
+        """Representation of NodeWrapper object"""
+
         func = get_function_name(self.func)
         sources = list(self.sources.keys())
         kwargs = list(self.keywords.keys())
@@ -335,18 +338,25 @@ class NodeWrapper(object):
         return compute_or_load_evaluation(name=self.name, func=self.func, backend=self.backend, kwargs=self.kwargs)
 
 
-def compute_or_load_evaluation(name: str, func: Callable, backend: Backend, kwargs: Dict[str, Any]):
+def compute_or_load_evaluation(name: str, func: Callable, backend: Backend, kwargs: Optional[Dict[str, Any]]):
     """
+    This function is the main workhorse of the library, and manages the backends, function and cache.
 
     Parameters
     ----------
-    name
-    func
-    backend
-    kwargs
+    name: str
+        Name of the node object to he calculated/loaded/returned from cache
+    func: callable
+        The function to call to evaluate the node value, if not cached already.
+    backend: Backend
+        The backend interface
+    kwargs: Dict[str, Any]
+        The keywords for func
 
     Returns
     -------
+    Any:
+        The return value of `func`, either calculated new, or loaded from cache/file as required.
 
     """
 
@@ -355,27 +365,32 @@ def compute_or_load_evaluation(name: str, func: Callable, backend: Backend, kwar
         name_short = name.resolve().relative_to(environ.get("BUILD_ROOT", "/"))
     else:
         name_short = name
+        if len(name_short) > 50:
+            name_short = f"...{name_short[-50:]}"
 
     # If the data is cached, return it
     if name in compute_or_load_evaluation.cache:
         logger.info(f"Loading {name_short} from local cache")
         return compute_or_load_evaluation.cache[name]
 
-    backend_interface = backend.get(name)
-
+    # Empty keywords if None
     if kwargs is None:
         kwargs = dict()
 
+    backend_interface = backend.get(name)
+
     if not backend_interface.exists():
+        # Set up the computation lock for this node
         with backend_interface.lock():
             # Build up dictionary of inputs
             inputs = kwargs.copy()
             for key, value in kwargs.items():
+                # Chain the computation of keywords if it is a NodeWrapper
                 if isinstance(value, NodeWrapper):
                     inputs[key] = value.evaluate()
 
             # Calculate the output
-            logger.info(f"Calculating {name_short}")
+            logger.info(f"Calculating {name_short}...")
             try:
                 data = func(**inputs)
             except Exception as ex:
@@ -410,6 +425,7 @@ def compute_or_load_evaluation(name: str, func: Callable, backend: Backend, kwar
 if not hasattr(compute_or_load_evaluation, "cache"):
     # TODO/FIXME: make a LRU cache with pre-defined storage capacity instead
     compute_or_load_evaluation.cache = {}
+
 
 if __name__ == "__main__":
 

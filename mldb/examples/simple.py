@@ -44,7 +44,6 @@ data = graph.make_node(func=load_data, kwargs=dict(rng=rng, N=10000, D=3))
 # Extract features from the data
 features = graph.make_node(func=extract_features, kwargs=dict(data=data, features=feat_funcs))
 
-
 # Generate parameters for a linear model
 params = graph.make_node(func=get_weights, kwargs=dict(D=len(feat_funcs)))
 
