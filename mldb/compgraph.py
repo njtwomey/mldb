@@ -249,7 +249,7 @@ class ComputationGraph(object):
         if not cache:
             backend = self.backends["none"]
 
-        node = NodeWrapper(parent=self, name=name, func=func, backend=backend, kwargs=kwargs,)
+        node = NodeWrapper(graph=self, name=name, func=func, backend=backend, kwargs=kwargs,)
 
         if cache:
             self.nodes[name] = node
@@ -268,7 +268,7 @@ def get_function_name(func: Callable) -> str:
 
 class NodeWrapper(object):
     def __init__(
-        self, parent: ComputationGraph, name: str, func: Callable, kwargs: Optional[Dict[str, Any]], backend: Backend,
+        self, graph: ComputationGraph, name: str, func: Callable, kwargs: Optional[Dict[str, Any]], backend: Backend,
     ):
         """
         This class provides the light wrapper around lazy evaluation/serialisation/de-serialisation with the
@@ -276,7 +276,7 @@ class NodeWrapper(object):
 
         Parameters
         ----------
-        parent: ComputationGraph
+        graph: ComputationGraph
             The parent computational graph of which this node is a child.
         name: str
             The name of the node
@@ -288,7 +288,7 @@ class NodeWrapper(object):
             A Backend instance that facilitates serialisation/de-serialisation of data
         """
 
-        self.parent: "ComputationGraph" = parent
+        self.graph: "ComputationGraph" = graph
 
         self.name: str = name
 
