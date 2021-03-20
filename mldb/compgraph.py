@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Dict
-from typing import Hashable
 from typing import Optional
 from typing import Tuple
 from typing import Union
@@ -105,12 +104,7 @@ class ComputationGraph(object):
             name = str(uuid4())
 
         self.name: str = name.lower()
-        self.backends: Dict[str, Backend] = dict()
-        self.nodes: Dict[Hashable, NodeWrapper] = dict()
-
-        self.default_backend: Optional[str] = None
-
-        self.add_backend("none", VolatileBackend(), make_default=True)
+        self.nodes: Dict[Any, NodeWrapper] = dict()
 
     def __repr__(self) -> str:
         """Represent the graph string"""
@@ -120,64 +114,7 @@ class ComputationGraph(object):
 
         return f"{self.__class__.__name__}({name=}, {nodes=})"
 
-    def add_backend(self, name: str, backend: Backend, make_default: bool = False) -> None:
-        """
-        This function adds a backend to the collection, affording the capability to serialise
-        and deserialise the data to file.
-
-        Parameters
-        ----------
-        name: str
-            The name of the backend (e.g. "none", "png", "json", etc)
-        backend: Backend
-            This is the instantiation of a backend object
-        make_default: bool (default=False)
-            If True, this will become the default backend for all created nodes.
-
-        Returns
-        -------
-        None
-        """
-
-        if not isinstance(name, str):
-            logger.exception(f"The backend_name parameter must be a string. Got {type(name)} as {name}")
-            raise TypeError
-
-        if name in self.backends:
-            logger.exception(f"The backend {name} has already been added: {self.backends.keys()}")
-            raise KeyError
-
-        self.backends[name] = backend
-
-        if make_default:
-            self.set_default_backend(name)
-
-    def set_default_backend(self, backend_name: str) -> None:
-        """
-        Specify the default backend
-
-        Parameters
-        ----------
-        backend_name: str
-            The name of the default backend. Must be a key of `self.backends`
-
-        Returns
-        -------
-        None
-
-        """
-
-        if not isinstance(backend_name, str):
-            logger.exception(f"The backend_name parameter must be a string. Got {type(backend_name)} as {backend_name}")
-            raise TypeError
-
-        if backend_name not in self.backends.keys():
-            logger.exception(f"The backend {backend_name} is not found in {self.backends.keys()}.")
-            raise KeyError
-
-        self.default_backend = backend_name
-
-    def evaluate(self, force: bool = False) -> Dict[str, Any]:
+    def evaluate(self, force: bool = False) -> Dict[Any, Any]:
         """
         Iterate through all nodes and evaluate their values.
 
@@ -203,12 +140,13 @@ class ComputationGraph(object):
     def make_node(
         self,
         func: Callable,
-        name: Hashable = None,
-        backend: Union[Backend, str] = None,
-        kwargs: Dict[str, Any] = None,
+        name: Optional[Any] = None,
+        key: Optional[Any] = None,
+        args: Optional[Tuple[str, Any]] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
+        backend: Optional[Backend] = None,
         cache: bool = True,
         collect: bool = True,
-        key: Optional[Tuple[str, Hashable]] = None,
     ) -> "NodeWrapper":
         """
         This function generates a new Node wrapper
@@ -220,18 +158,18 @@ class ComputationGraph(object):
         name: Optional[str] (default=None)
             This is the name of the node that is to be created. If `cache is True`, the node
             will be stored under `ComputationGraph.nodes[name]`
-        backend: Optional[Union[Backend, str]] (default=None)
-            This argument defines the interface for how the return value of `func` will be serialised/deserialised.
-            If it is a string, the value will be looked up from `self.backends`, if it's an instance of Bakend,
-            it will be used directly, unless `cache is True` wherein no backend will be used.
-        kwargs: Optional[str] (default=None)
-            This dictionary specifies the aruguments that are to be passed into `func`.
+        key: Optional[str] (default=None)
+            An optional key with which to store the node. If `key=None`, the `name` argument is used as key.
+        args: Optional[Tuple[Any]] (default=None)
+            The args to be passed into `func`.
+        kwargs: Optional[Dict[str, Any]] (default=None)
+            The kwargs to be passed into `func`.
+        backend: Optional[Backend] (default=None)
+            The optional backend used for serialising/deserialising
         cache: bool (default=True)
             Whether to use a backend
         collect: bool (default=True)
-            Whether to add to node list
-        key: Optional[str] (default=None)
-            An optional key with which to store the node. If `key=None`, the `name` argument is used as key.
+            Whether to add the node to `self.nodes`
 
         Returns
         -------
@@ -246,21 +184,18 @@ class ComputationGraph(object):
             name = str(uuid4())
 
         if name in self.nodes:
-            raise KeyError(f"A node with '{name}' name already exists in {self.nodes.keys()}")
+            raise KeyError(f"A node with '{name}' name already exists in {self.nodes.keys()}.")
 
-        if backend is not Backend:
-            if backend is None:
-                backend = self.backends[self.default_backend]
-            elif isinstance(backend, str):
-                backend = self.backends[backend]
+        if backend is not None and not isinstance(backend, Backend):
+            raise ValueError(f"The backend is expected to be of type Backend, but got {type(backend)}.")
 
         if not cache:
-            backend = self.backends["none"]
+            backend = VolatileBackend()
 
         if key is None:
             key = name
 
-        node = NodeWrapper(graph=self, name=name, func=func, backend=backend, kwargs=kwargs)
+        node = NodeWrapper(graph=self, name=name, func=func, backend=backend, args=args, kwargs=kwargs)
 
         if collect:
             self.nodes[key] = node
@@ -281,10 +216,11 @@ class NodeWrapper(object):
     def __init__(
         self,
         graph: ComputationGraph,
-        name: Hashable,
+        name: Any,
         func: Callable,
-        kwargs: Optional[Dict[str, Any]],
         backend: Backend,
+        args: Optional[Tuple[Any]] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
     ):
         """
         This class provides the light wrapper around lazy evaluation/serialisation/de-serialisation with the
@@ -308,8 +244,9 @@ class NodeWrapper(object):
 
         self.name: str = name
 
-        self.kwargs: Dict[str, Any] = dict() if kwargs is None else kwargs
         self.func: Callable = func
+        self.args: Tuple[Any] = args
+        self.kwargs: Dict[str, Any] = kwargs
 
         self.backend: Backend = backend
 
@@ -320,7 +257,7 @@ class NodeWrapper(object):
         sources = sorted(map(str, self.sources.keys()))
         kwargs = sorted(map(str, self.keywords.keys()))
 
-        return f"{self.__class__.__name__}({sources=}, {func=}, {kwargs=})"
+        return f"{self.__class__.__name__}({func=}, {sources=}, {kwargs=})"
 
     @property
     def exists(self) -> bool:
@@ -354,7 +291,19 @@ class NodeWrapper(object):
         return compute_or_load_evaluation(name=self.name, func=self.func, backend=self.backend, kwargs=self.kwargs)
 
 
-def compute_or_load_evaluation(name: str, func: Callable, backend: Backend, kwargs: Optional[Dict[str, Any]]):
+def resolve_arguments(arguments):
+    if isinstance(arguments, NodeWrapper):
+        return arguments.evaluate()
+    if isinstance(arguments, (list, tuple)):
+        return type(arguments)(resolve_arguments(val) for val in arguments)
+    elif isinstance(arguments, dict):
+        return {kk: resolve_arguments(vv) for kk, vv in arguments.items()}
+    return arguments
+
+
+def compute_or_load_evaluation(
+    name: str, func: Callable, backend: Backend, args: Optional[Tuple[Any]], kwargs: Optional[Dict[str, Any]]
+):
     """
     This function is the main workhorse of the library, and manages the backends, function and cache.
 
@@ -366,7 +315,9 @@ def compute_or_load_evaluation(name: str, func: Callable, backend: Backend, kwar
         The function to call to evaluate the node value, if not cached already.
     backend: Backend
         The backend interface
-    kwargs: Dict[str, Any]
+    args: Optional[Tuple[Any]]
+        The args for func
+    kwargs: Optional[Dict[str, Any]]
         The keywords for func
 
     Returns
@@ -381,34 +332,33 @@ def compute_or_load_evaluation(name: str, func: Callable, backend: Backend, kwar
         name_short = name.resolve().relative_to(environ.get("BUILD_ROOT", "/"))
     else:
         name_short = name
-        if len(name_short) > 50:
-            name_short = f"...{name_short[-50:]}"
+
+    if len(name_short) > 75:
+        name_short = f"...{name_short[-50:]}"
 
     # If the data is cached, return it
     if name in compute_or_load_evaluation.cache:
         logger.info(f"Loading {name_short} from local cache")
         return compute_or_load_evaluation.cache[name]
 
-    # Empty keywords if None
-    if kwargs is None:
-        kwargs = dict()
-
     backend_interface = backend.get(name)
 
     if not backend_interface.exists():
-        # Set up the computation lock for this node
+        # Set default args and kwargs
+        if args is None:
+            args = tuple()
+        if kwargs is None:
+            kwargs = dict()
+
         with backend_interface.lock():
             # Build up dictionary of inputs
-            inputs = kwargs.copy()
-            for key, value in kwargs.items():
-                # Chain the computation of keywords if it is a NodeWrapper
-                if isinstance(value, NodeWrapper):
-                    inputs[key] = value.evaluate()
+            args = resolve_arguments(args)
+            kwargs = resolve_arguments(kwargs)
 
             # Calculate the output
             logger.info(f"Calculating {name_short}...")
             try:
-                data = func(**inputs)
+                data = func(*args, **kwargs)
             except Exception as ex:
                 logger.exception(f"The following exception was raised when computing {name}: {ex}")
                 raise ex
