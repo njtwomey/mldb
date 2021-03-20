@@ -51,7 +51,7 @@ params = graph.make_node(func=get_weights, kwargs=dict(D=len(feat_funcs)))
 z_score = graph.make_node(func=dot_add, kwargs=dict(feats=features, wb=params))
 
 # Go from the score to the predictions
-predictions = graph.make_node(func=sigmoid, kwargs=dict(z_score=z_score))
+predictions = graph.make_node(func=sigmoid, args=z_score)  # kwargs=dict(z_score=z_score))
 
 
 for key, value in graph.nodes.items():

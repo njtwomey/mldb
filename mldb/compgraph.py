@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Dict
+from typing import List
 from typing import Optional
 from typing import Tuple
 from typing import Union
@@ -142,7 +143,7 @@ class ComputationGraph(object):
         func: Callable,
         name: Optional[Any] = None,
         key: Optional[Any] = None,
-        args: Optional[Tuple[str, Any]] = None,
+        args: Optional[Union[Any, List[Any], Tuple[Any]]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
         backend: Optional[Backend] = None,
         cache: bool = True,
@@ -160,7 +161,7 @@ class ComputationGraph(object):
             will be stored under `ComputationGraph.nodes[name]`
         key: Optional[str] (default=None)
             An optional key with which to store the node. If `key=None`, the `name` argument is used as key.
-        args: Optional[Tuple[Any]] (default=None)
+        args: Optional[Union[List[Any], Tuple[Any]]] (default=None)
             The args to be passed into `func`.
         kwargs: Optional[Dict[str, Any]] (default=None)
             The kwargs to be passed into `func`.
@@ -180,23 +181,32 @@ class ComputationGraph(object):
 
         assert callable(func)
 
+        # Validate the name/key
         if name is None:
             name = str(uuid4())
-
         if name in self.nodes:
             raise KeyError(f"A node with '{name}' name already exists in {self.nodes.keys()}.")
-
-        if backend is not None and not isinstance(backend, Backend):
-            raise ValueError(f"The backend is expected to be of type Backend, but got {type(backend)}.")
-
-        if not cache:
-            backend = VolatileBackend()
-
         if key is None:
             key = name
 
+        # Validate backend
+        if backend is not None and not isinstance(backend, Backend):
+            raise ValueError(f"The backend is expected to be of type Backend, but got {type(backend)}.")
+        if not cache:
+            backend = None
+
+        # Validate keywords
+        if kwargs is not None and not isinstance(kwargs, dict):
+            raise ValueError(f"")
+
+        # Validate args
+        if args is not None and not isinstance(args, tuple):
+            args = (args,)
+
+        # Instantiate the wrapper
         node = NodeWrapper(graph=self, name=name, func=func, backend=backend, args=args, kwargs=kwargs)
 
+        # Save to nodes
         if collect:
             self.nodes[key] = node
 
@@ -245,8 +255,8 @@ class NodeWrapper(object):
         self.name: str = name
 
         self.func: Callable = func
-        self.args: Tuple[Any] = args
-        self.kwargs: Dict[str, Any] = kwargs
+        self.args: Tuple[Any] = tuple() if args is None else args
+        self.kwargs: Dict[str, Any] = dict() if kwargs is None else kwargs
 
         self.backend: Backend = backend
 
@@ -254,10 +264,10 @@ class NodeWrapper(object):
         """Representation of NodeWrapper object"""
 
         func = get_function_name(self.func)
-        sources = sorted(map(str, self.sources.keys()))
-        kwargs = sorted(map(str, self.keywords.keys()))
+        args = [arg.name if isinstance(arg, NodeWrapper) else arg for arg in self.args]
+        kwargs = sorted(map(str, self.kwargs.keys()))
 
-        return f"{self.__class__.__name__}({func=}, {sources=}, {kwargs=})"
+        return f"{self.__class__.__name__}({func=}, {args=}, {kwargs=})"
 
     @property
     def exists(self) -> bool:
@@ -288,7 +298,9 @@ class NodeWrapper(object):
         Any: the return value of `self.func`.
         """
 
-        return compute_or_load_evaluation(name=self.name, func=self.func, backend=self.backend, kwargs=self.kwargs)
+        return compute_or_load_evaluation(
+            name=self.name, func=self.func, backend=self.backend, args=self.args, kwargs=self.kwargs
+        )
 
 
 def resolve_arguments(arguments):
@@ -341,6 +353,8 @@ def compute_or_load_evaluation(
         logger.info(f"Loading {name_short} from local cache")
         return compute_or_load_evaluation.cache[name]
 
+    if backend is None:
+        backend = VolatileBackend()
     backend_interface = backend.get(name)
 
     if not backend_interface.exists():
@@ -356,7 +370,7 @@ def compute_or_load_evaluation(
             kwargs = resolve_arguments(kwargs)
 
             # Calculate the output
-            logger.info(f"Calculating {name_short}...")
+            logger.info(f"Evaluating {name_short}...")
             try:
                 data = func(*args, **kwargs)
             except Exception as ex:
@@ -364,8 +378,8 @@ def compute_or_load_evaluation(
                 raise ex
 
             # Save data if not None
-            if data is not None:
-                logger.info(f"Dumping {name_short} to file")
+            if data is not None and backend.cache_data:
+                logger.info(f"Serialising {name_short}...")
                 try:
                     backend_interface.save(data=data)
                 except Exception as ex:
@@ -374,16 +388,14 @@ def compute_or_load_evaluation(
 
     else:
         try:
-            logger.info(f"Loading {name_short} from file")
+            logger.info(f"Deserialising {name_short}...")
             data = backend_interface.load()
         except Exception as ex:
             logger.exception(f"The following exception was raised when loading {name}: {ex}")
             raise ex
 
     # Determine whether to cache these results or not
-    cache_data = hasattr(backend, "cache_data") and backend.cache_data
-    if cache_data and data is not None:
-        compute_or_load_evaluation.cache[name] = data
+    compute_or_load_evaluation.cache[name] = data
 
     return data
 

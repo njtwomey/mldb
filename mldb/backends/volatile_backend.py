@@ -20,4 +20,4 @@ class VolatileInterface(BackendInterface):
 
 class VolatileBackend(Backend):
     def __init__(self):
-        super(VolatileBackend, self).__init__(interface=VolatileInterface)
+        super(VolatileBackend, self).__init__(interface=VolatileInterface, cache_data=False)
