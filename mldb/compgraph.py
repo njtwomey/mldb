@@ -6,6 +6,8 @@ from typing import Callable
 from typing import Dict
 from typing import Hashable
 from typing import Optional
+from typing import Tuple
+from typing import Union
 from uuid import uuid4
 
 from loguru import logger
@@ -202,11 +204,11 @@ class ComputationGraph(object):
         self,
         func: Callable,
         name: Hashable = None,
-        backend: str = None,
+        backend: Union[Backend, str] = None,
         kwargs: Dict[str, Any] = None,
         cache: bool = True,
         collect: bool = True,
-        key: Optional[Hashable] = None,
+        key: Optional[Tuple[str, Hashable]] = None,
     ) -> "NodeWrapper":
         """
         This function generates a new Node wrapper
@@ -258,7 +260,7 @@ class ComputationGraph(object):
         if key is None:
             key = name
 
-        node = NodeWrapper(graph=self, name=name, func=func, backend=backend, kwargs=kwargs,)
+        node = NodeWrapper(graph=self, name=name, func=func, backend=backend, kwargs=kwargs)
 
         if collect:
             self.nodes[key] = node
