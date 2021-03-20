@@ -114,7 +114,7 @@ class ComputationGraph(object):
         """Represent the graph string"""
 
         name = self.name
-        nodes = sorted(list(self.nodes.keys()))
+        nodes = sorted(map(str, self.nodes.keys()))
 
         return f"{self.__class__.__name__}({name=}, {nodes=})"
 
@@ -310,8 +310,8 @@ class NodeWrapper(object):
         """Representation of NodeWrapper object"""
 
         func = get_function_name(self.func)
-        sources = list(self.sources.keys())
-        kwargs = list(self.keywords.keys())
+        sources = sorted(map(str, self.sources.keys()))
+        kwargs = sorted(map(str, self.keywords.keys()))
 
         return f"{self.__class__.__name__}({sources=}, {func=}, {kwargs=})"
 
