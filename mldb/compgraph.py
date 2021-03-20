@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Dict
+from typing import Hashable
 from typing import Optional
-from typing import Union
 from uuid import uuid4
 
 from loguru import logger
@@ -104,7 +104,7 @@ class ComputationGraph(object):
 
         self.name: str = name.lower()
         self.backends: Dict[str, Backend] = dict()
-        self.nodes: Dict[str, NodeWrapper] = dict()
+        self.nodes: Dict[Hashable, NodeWrapper] = dict()
 
         self.default_backend: Optional[str] = None
 
@@ -201,12 +201,12 @@ class ComputationGraph(object):
     def make_node(
         self,
         func: Callable,
-        name: Union[str, Path] = None,
+        name: Hashable = None,
         backend: str = None,
         kwargs: Dict[str, Any] = None,
         cache: bool = True,
         collect: bool = True,
-        key: Optional[str] = None,
+        key: Optional[Hashable] = None,
     ) -> "NodeWrapper":
         """
         This function generates a new Node wrapper
@@ -277,7 +277,12 @@ def get_function_name(func: Callable) -> str:
 
 class NodeWrapper(object):
     def __init__(
-        self, graph: ComputationGraph, name: str, func: Callable, kwargs: Optional[Dict[str, Any]], backend: Backend,
+        self,
+        graph: ComputationGraph,
+        name: Hashable,
+        func: Callable,
+        kwargs: Optional[Dict[str, Any]],
+        backend: Backend,
     ):
         """
         This class provides the light wrapper around lazy evaluation/serialisation/de-serialisation with the
