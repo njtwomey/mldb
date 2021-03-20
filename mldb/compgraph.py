@@ -201,7 +201,10 @@ class ComputationGraph(object):
 
         # Validate args
         if args is not None and not isinstance(args, tuple):
-            args = (args,)
+            if hasattr(args, "__len__"):
+                args = tuple(args)
+            else:
+                args = (args,)
 
         # Instantiate the wrapper
         node = NodeWrapper(graph=self, name=name, func=func, backend=backend, args=args, kwargs=kwargs)
