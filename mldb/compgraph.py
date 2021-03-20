@@ -205,6 +205,7 @@ class ComputationGraph(object):
         backend: str = None,
         kwargs: Dict[str, Any] = None,
         cache: bool = True,
+        collect: bool = True,
     ) -> "NodeWrapper":
         """
         This function generates a new Node wrapper
@@ -223,6 +224,9 @@ class ComputationGraph(object):
         kwargs: Optional[str] (default=None)
             This dictionary specifies the aruguments that are to be passed into `func`.
         cache: bool (default=True)
+            Whether to use a backend
+        collect: bool (default=True):
+            Whether to add to node list
 
         Returns
         -------
@@ -250,7 +254,7 @@ class ComputationGraph(object):
 
         node = NodeWrapper(graph=self, name=name, func=func, backend=backend, kwargs=kwargs,)
 
-        if cache:
+        if collect:
             self.nodes[name] = node
 
         return node
