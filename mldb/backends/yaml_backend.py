@@ -15,11 +15,11 @@ class YamlInterface(FileSystemInterface):
 
     def load(self):
         with open(self.path, "r") as fil:
-            return yaml.load(fil)
+            return yaml.safe_load(fil)
 
     def save(self, data):
         with open(self.path, "w") as fil:
-            yaml.dump(data, fil)
+            yaml.safe_dump(data, fil)
 
 
 class YamlBackend(FileSystemBase):

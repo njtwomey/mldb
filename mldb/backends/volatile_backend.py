@@ -5,6 +5,9 @@ __all__ = ["VolatileBackend", "VolatileInterface"]
 
 
 class VolatileInterface(BackendInterface):
+    def __init__(self):
+        super().__init__(path="/tmp")
+
     def exists(self):
         return False
 

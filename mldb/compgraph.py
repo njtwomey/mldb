@@ -133,7 +133,7 @@ class ComputationGraph(object):
         for key, node in self.nodes.items():
             if node.exists and not force:
                 continue
-            logger.info(f"Evaluating {key}...")
+
             evaluations[key] = node.evaluate()
 
         return evaluations
@@ -201,9 +201,9 @@ class ComputationGraph(object):
 
         # Validate args
         if args is not None and not isinstance(args, tuple):
-            if hasattr(args, "__len__"):
+            try:
                 args = tuple(args)
-            else:
+            except TypeError:
                 args = (args,)
 
         # Instantiate the wrapper
@@ -267,10 +267,10 @@ class NodeWrapper(object):
         """Representation of NodeWrapper object"""
 
         func = get_function_name(self.func)
-        args = [arg.name if isinstance(arg, NodeWrapper) else arg for arg in self.args]
+        n_args = len(self.args)
         kwargs = sorted(map(str, self.kwargs.keys()))
 
-        return f"{self.__class__.__name__}({func=}, {args=}, {kwargs=})"
+        return f"{self.__class__.__name__}({func=}, {n_args=}, {kwargs=})"
 
     @property
     def exists(self) -> bool:
@@ -347,13 +347,11 @@ def compute_or_load_evaluation(
         name_short = name.resolve().relative_to(environ.get("BUILD_ROOT", "/"))
     else:
         name_short = name
-
-    if len(name_short) > 75:
-        name_short = f"...{name_short[-50:]}"
+        if len(name_short) > 75:
+            name_short = f"...{name_short[-50:]}"
 
     # If the data is cached, return it
     if name in compute_or_load_evaluation.cache:
-        logger.info(f"Loading {name_short} from local cache")
         return compute_or_load_evaluation.cache[name]
 
     if backend is None:
@@ -398,7 +396,8 @@ def compute_or_load_evaluation(
             raise ex
 
     # Determine whether to cache these results or not
-    compute_or_load_evaluation.cache[name] = data
+    if data is not None:
+        compute_or_load_evaluation.cache[name] = data
 
     return data
 
