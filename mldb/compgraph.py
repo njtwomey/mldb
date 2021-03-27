@@ -261,6 +261,8 @@ class NodeWrapper(object):
         self.args: Tuple[Any] = tuple() if args is None else args
         self.kwargs: Dict[str, Any] = dict() if kwargs is None else kwargs
 
+        self.chained_nodes: List[NodeWrapper] = []
+
         self.backend: Backend = backend
 
     def __repr__(self) -> str:
@@ -271,6 +273,12 @@ class NodeWrapper(object):
         kwargs = sorted(map(str, self.kwargs.keys()))
 
         return f"{self.__class__.__name__}({func=}, {n_args=}, {kwargs=})"
+
+    def append_evaluation(self, node: "NodeWrapper") -> None:
+        """A simple function which cascades node evaluation"""
+
+        assert isinstance(node, NodeWrapper), f"Expected NodeWrapper, but got {type(node)}: {node}."
+        self.chained_nodes.append(node)
 
     @property
     def exists(self) -> bool:
@@ -301,9 +309,14 @@ class NodeWrapper(object):
         Any: the return value of `self.func`.
         """
 
-        return compute_or_load_evaluation(
+        out = compute_or_load_evaluation(
             name=self.name, func=self.func, backend=self.backend, args=self.args, kwargs=self.kwargs
         )
+
+        for node in self.chained_nodes:
+            node.evaluate()
+
+        return out
 
 
 def resolve_arguments(arguments):
