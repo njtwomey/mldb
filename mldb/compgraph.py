@@ -13,7 +13,9 @@ from uuid import uuid4
 from loguru import logger
 
 from mldb.backends import Backend
+from mldb.backends import BackendInterface
 from mldb.backends import VolatileBackend
+from mldb.backends import VolatileInterface
 
 
 class ComputationGraph(object):
@@ -34,7 +36,7 @@ class ComputationGraph(object):
     >>> graph = ComputationGraph()
     >>> node = graph.make_node(func=load_data)
     >>> make_node
-    <NodeWrapper sources=[] kwargs=[] factor=load_data sink=d16d98ef-2efc-41ef-b2e5-96738689c970>
+    NodeWrapper(func='load_data', n_args=0, kwargs=[])
     >>> make_node.evaluate()
     [[1, 2, 3], [4, 5, 6]]
 
@@ -56,37 +58,9 @@ class ComputationGraph(object):
     >>> node = graph.make_node(func=load_data)
     >>> max_node = graph.make_node(func=max_row, kwargs=dict(data=make_node))
     >>> max_node
-    <NodeWrapper sources=[data] kwargs=[] factor=max_row sink=3d7a5b7d-48cc-4010-b1cc-05ad348714e0>
+    NodeWrapper(func='max_row', n_args=0, kwargs=['data'])
     >>> max_node.evaluate()
     [3, 6]
-
-    Note, that it was not necessary to directly call `evaluate()` on the node object. This is because the
-    internal logic of the `evaluate` member function traverse the computational graph and automatically
-    evaluates the intermediate nodes.
-
-    This library allows additional (non-NodeWrapper) key words to be passed into the function too. In the
-    following example, the function multiplies the data by a particular value `x` that is not known in
-    advance. The value of `x` is specified in the `kwargs` argument of ComputationGraph.node (as opposed to
-    the sources argument) since one does not expect kwargs to contain NodeWrapper objects.
-
-    >>> def load_data():
-    ...     return [[1, 2, 3], [4, 5, 6]]
-    ...
-    >>> def max_row(data):
-    ...     return [max(row) for row in data]
-    ...
-    >>> def scale_data(data, scale):
-    ...     return [d * scale for d in data]
-    ...
-    >>> from mldb import ComputationGraph
-    >>> graph = ComputationGraph()
-    >>> node = graph.make_node(func=load_data)
-    >>> max_node = graph.make_node(func=max_row, kwargs=dict(data=make_node)()
-    >>> max_node_times_3 = graph.make_node(func=scale_data, kwargs=dict(data=max_node, scale=3))
-    >>> max_node_times_3
-    <NodeWrapper sources=[data] kwargs=[scale] factor=scale_data sink=f1b3d6c0-deab-430a-9c6f-cdd6f2ff38e4>
-    >>> max_node_times_3.evaluate()
-    [9, 18]
     """
 
     def __init__(self, name: Optional[str] = None):
@@ -129,23 +103,20 @@ class ComputationGraph(object):
         """
 
         evaluations = dict()
-
         for key, node in self.nodes.items():
             if node.exists and not force:
                 continue
-
             evaluations[key] = node.evaluate()
-
         return evaluations
 
     def make_node(
         self,
         func: Callable,
-        name: Optional[Any] = None,
-        key: Optional[Any] = None,
         args: Optional[Union[Any, List[Any], Tuple[Any]]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
         backend: Optional[Backend] = None,
+        name: Optional[Any] = None,
+        key: Optional[Any] = None,
         cache: bool = True,
         collect: bool = True,
     ) -> "NodeWrapper":
@@ -263,28 +234,34 @@ class NodeWrapper(object):
 
         self.chained_nodes: List[NodeWrapper] = []
 
-        self.backend: Backend = backend
+        if backend is None:
+            backend = VolatileBackend()
+        assert isinstance(backend, Backend)
+
+        self.backend_interface: BackendInterface = backend.get(name)
 
     def __repr__(self) -> str:
         """Representation of NodeWrapper object"""
 
         func = get_function_name(self.func)
         n_args = len(self.args)
-        kwargs = sorted(map(str, self.kwargs.keys()))
+        n_kwargs = len(self.kwargs)
+        kwargs = "{" + ", ".join(f"'{kk}': ..." for kk in self.kwargs.keys()) + "}"
 
-        return f"{self.__class__.__name__}({func=}, {n_args=}, {kwargs=})"
+        return f"{self.__class__.__name__}({func=}, {n_args=}, {n_kwargs=}, kwargs={kwargs})"
 
     def append_evaluation(self, node: "NodeWrapper") -> None:
-        """A simple function which cascades node evaluation"""
+        """A simple function which cascades `node` to be evaluated after `self`"""
 
         assert isinstance(node, NodeWrapper), f"Expected NodeWrapper, but got {type(node)}: {node}."
+
         self.chained_nodes.append(node)
 
     @property
     def exists(self) -> bool:
         """A wrapper around the backend object to determine if the computation of `self.func` exists already."""
 
-        return self.backend.get(self.name).exists()
+        return self.backend_interface.exists()
 
     @property
     def sources(self) -> Dict[str, "NodeWrapper"]:
@@ -310,7 +287,7 @@ class NodeWrapper(object):
         """
 
         out = compute_or_load_evaluation(
-            name=self.name, func=self.func, backend=self.backend, args=self.args, kwargs=self.kwargs
+            name=self.name, func=self.func, backend_interface=self.backend_interface, args=self.args, kwargs=self.kwargs
         )
 
         for node in self.chained_nodes:
@@ -325,6 +302,9 @@ def resolve_arguments(
     """A convenience function that resolves NodeWrapper objects in args and kwargs"""
     if isinstance(arguments, NodeWrapper):
         return arguments.evaluate()
+    if isinstance(arguments, ComputationGraph):
+        logger.warning(f"Not yet evaluating ComputationalGraphs, returning object")
+        return arguments
     if isinstance(arguments, (list, tuple)):
         return type(arguments)(resolve_arguments(val) for val in arguments)
     elif isinstance(arguments, dict):
@@ -333,7 +313,11 @@ def resolve_arguments(
 
 
 def compute_or_load_evaluation(
-    name: str, func: Callable, backend: Backend, args: Optional[Tuple[Any]], kwargs: Optional[Dict[str, Any]]
+    name: str,
+    func: Callable,
+    backend_interface: BackendInterface,
+    args: Optional[Tuple[Any]],
+    kwargs: Optional[Dict[str, Any]],
 ):
     """
     This function is the main workhorse of the library, and manages the backends, function and cache.
@@ -344,7 +328,7 @@ def compute_or_load_evaluation(
         Name of the node object to he calculated/loaded/returned from cache
     func: callable
         The function to call to evaluate the node value, if not cached already.
-    backend: Backend
+    backend_interface: BackendInterface
         The backend interface
     args: Optional[Tuple[Any]]
         The args for func
@@ -370,10 +354,6 @@ def compute_or_load_evaluation(
     if name in compute_or_load_evaluation.cache:
         return compute_or_load_evaluation.cache[name]
 
-    if backend is None:
-        backend = VolatileBackend()
-    backend_interface = backend.get(name)
-
     if not backend_interface.exists():
         # Set default args and kwargs
         if args is None:
@@ -394,8 +374,8 @@ def compute_or_load_evaluation(
                 logger.exception(f"The following exception was raised when computing {name}: {ex}")
                 raise ex
 
-            # Save data if not None
-            if data is not None and backend.cache_data:
+            # Save data
+            if not isinstance(backend_interface, VolatileInterface):
                 logger.info(f"Serialising {name_short}...")
                 try:
                     backend_interface.save(data=data)
@@ -421,39 +401,3 @@ def compute_or_load_evaluation(
 if not hasattr(compute_or_load_evaluation, "cache"):
     # TODO/FIXME: make a LRU cache with pre-defined storage capacity instead
     compute_or_load_evaluation.cache = {}
-
-
-if __name__ == "__main__":
-
-    def main():
-        from time import sleep
-
-        def load():
-            return [[1, 2, 3], [4, 5, 6]]
-
-        def max_row(data):
-            return list(map(max, data))
-
-        def times_x(data, x):
-            return [d * x for d in data]
-
-        def long_process():
-            sleep(10)
-            return "long process completed"
-
-        graph = ComputationGraph()
-        node = graph.make_node(func=load)
-        node_max = graph.make_node(func=max_row, kwargs=dict(data=node))
-        x3 = graph.make_node(func=times_x, kwargs=dict(data=node_max, x=3))
-
-        long = graph.make_node(func=long_process, name="long_process_name")
-
-        print(node.evaluate())
-        print(node_max.evaluate())
-        print(x3.evaluate())
-        print(node)
-        print(node_max)
-        print(x3)
-        print(long.evaluate())
-
-    main()

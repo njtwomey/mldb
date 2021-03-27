@@ -23,7 +23,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/twomeynj/mldb",
-    install_requires=["uuid", "joblib", "numpy", "pandas", "matplotlib"],
+    install_requires=["joblib>=1.0", "numpy>=1.20", "pandas>=1.2", "matplotlib>=1.34", "loguru>=0.5", "pyyaml>=5.4"],
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
