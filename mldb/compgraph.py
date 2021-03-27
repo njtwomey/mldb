@@ -319,7 +319,10 @@ class NodeWrapper(object):
         return out
 
 
-def resolve_arguments(arguments):
+def resolve_arguments(
+    arguments: Union[Any, List[Any], Tuple[Any], Dict[str, Any]]
+) -> Union[Any, List[Any], Tuple[Any], Dict[str, Any]]:
+    """A convenience function that resolves NodeWrapper objects in args and kwargs"""
     if isinstance(arguments, NodeWrapper):
         return arguments.evaluate()
     if isinstance(arguments, (list, tuple)):
