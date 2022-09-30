@@ -7,7 +7,7 @@ verify_ssl = true
 pre-commit = "~=2.11"
 
 [packages]
-joblib = "~=1.0"
+joblib = "~=1.2"
 numpy = "~=1.20"
 pandas = "~=1.2"
 matplotlib = "~=3.4"
